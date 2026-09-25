@@ -232,6 +232,18 @@ body.pre #toast{z-index:8}
 .petal{position:absolute;top:-16px;width:10px;height:8px;border-radius:10px 1px 10px 1px;background:#f6b6c8;opacity:.9;pointer-events:none;animation:petal linear infinite}
 @keyframes petal{to{transform:translate(-60px,110vh) rotate(540deg)}}
 @media (prefers-reduced-motion: reduce){.in-letter,.petal{animation:none}.petal{display:none}}
+/* チュートリアル:操作する場所を光る枠で示す(枠はタップを通す) */
+#coachRing{position:fixed;z-index:8;display:none;border:3px solid #ffd35a;border-radius:12px;pointer-events:none;
+  box-shadow:0 0 0 9999px rgba(0,0,0,.35),0 0 16px 2px rgba(255,211,90,.9);animation:coachPulse 1.2s ease-in-out infinite}
+@keyframes coachPulse{50%{border-color:#fff}}
+#coachTip{position:fixed;z-index:8;display:none;left:16px;right:16px;max-width:360px;margin:0 auto;padding:12px 14px 10px;border-radius:14px;
+  background:#fffaf0;color:#3a2414;border:2px solid #c8a04a;box-shadow:0 8px 24px rgba(0,0,0,.35);font-size:14px;line-height:1.6}
+#coachTip .ct-h{font-size:11.5px;font-weight:700;color:#a0701a;letter-spacing:.05em}
+#coachTip .ct-b{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}
+#coachTip button{min-height:40px;padding:0 16px;border-radius:999px;font:inherit;font-weight:700;font-size:13px;cursor:pointer}
+#coachTip .ct-skip{border:1.5px solid #d8c3a0;background:transparent;color:#7a5a3a}
+#coachTip .ct-next{border:0;background:#c0392b;color:#fff}
+@media (prefers-reduced-motion: reduce){#coachRing{animation:none}}
 </style>
 </head>
 <body>
@@ -308,6 +320,7 @@ body.pre #toast{z-index:8}
   </div>
 </div>
 <div id="modal"><div class="mcard" id="mcard"></div></div>
+<div id="coachRing"></div><div id="coachTip" role="dialog" aria-live="polite"></div>
 <div id="map" role="dialog" aria-label="全国マップ">
   <div class="map-head"><div><div class="map-title">全国マップ</div><div class="map-sub" id="mapSub"></div></div><button type="button" id="mapClose">閉じる</button></div>
   <div class="map-body"><svg id="mapSvg" viewBox="22 2 342 364" preserveAspectRatio="xMidYMid meet"></svg></div>
@@ -425,10 +438,13 @@ const DECO={
   art:{name:'絵画',grades:['小さな絵','金の額縁の絵画','絵画を2枚'],b:.08,c:1500,g:4.5},
   neon:{name:'看板',grades:['ネオン看板','大きなネオン看板','色が変わる電光看板'],b:.15,c:2500,g:4.5}
 };
-Object.values(DECO).forEach(d=>d.max=d.grades.length);
+// 各グレードを5段階に分けて少しずつ強化する。見た目は5段階ごとに次のグレードになる
+const DECO_STEP=5;
+Object.values(DECO).forEach(d=>{d.max=d.grades.length*DECO_STEP;d.gs=Math.pow(d.g,1/DECO_STEP);d.c1=d.c*(d.gs-1)/(d.g-1);});
+const dg=k=>Math.ceil(S.deco[k]/DECO_STEP); // 見た目のグレード(0〜3)
 const DEF={story:null,boss:null,started:0,active:0,shops:null,stage:0,storeEarn:0,chain:0,stores:[],cleared:0,members:null,hallStaff:null,cands:{},broom:0,maint:0,repairs:0,cleans:0,money:200,tiers:[0,0],modes:['free','free'],clock:600,day:1,closing:0,rep:3,visits:0,regs:[0,0,0,0,0],dayEarn:0,dayVisits:0,fee:0,drink:0,food:0,hall:0,staff:1,wait:1,tv:0,manga:0,mag:0,
   deco:{plant:0,clock:0,speaker:0,light:0,purifier:0,art:0,neon:0},
-  total:0,games:0,yaku:0,lost:0,served:0,proUntil:0,rate:0,last:Date.now()};
+  total:0,games:0,yaku:0,lost:0,served:0,proUntil:0,rate:0,lv2:1,tut:0,last:Date.now()};
 const KEY='jansou-proto-v3';
 function fresh(){return clampS(JSON.parse(JSON.stringify(Object.assign({},DEF,{last:Date.now()}))));}
 function pick(a){return a[Math.random()*a.length|0];}
@@ -460,22 +476,24 @@ function migrateShops(d){if(d.shops)return;const cur=d.stage||0;d.shops=[];
   d.cleared=(d.cleared>cur)?1:0;d.shops.push(snapShop(d));d.active=cur;d.chain=0;}
 function genCands(){const out=[];for(let i=0;i<3;i++)out.push(genStaff(out.map(c=>c.name)));return out;}
 function genStaffRaw(d){const keep=S;S=d;const r=genStaff();S=keep;return r;}
-function load(){try{const s=localStorage.getItem(KEY)||localStorage.getItem('jansou-proto-v2');if(s){const o=JSON.parse(s);const d=fresh();Object.assign(d,o);if(!o.members){d.members=null;if(!o.hallStaff)d.hallStaff=null;}d.deco=Object.assign({},DEF.deco,o.deco||{});while(d.modes.length<d.tiers.length)d.modes.push('free');if(o.storeEarn==null)d.storeEarn=d.total||0;return clampS(d);}}catch(e){}return fresh();}
+function migrateLv(o){const f=x=>{x.fee=Math.round((x.fee||0)*2.5);x.drink=x.drink?1+Math.round((x.drink-1)*2.5):0;x.food=x.food?1+Math.round((x.food-1)*2.5):0;
+  if(x.deco)Object.keys(x.deco).forEach(k=>x.deco[k]*=DECO_STEP);};f(o);(o.shops||[]).forEach(f);o.lv2=1;}
+function load(){try{const s=localStorage.getItem(KEY)||localStorage.getItem('jansou-proto-v2');if(s){const o=JSON.parse(s);if(!o.lv2)migrateLv(o);if(o.tut==null)o.tut=o.started?-1:0;const d=fresh();Object.assign(d,o);if(!o.members){d.members=null;if(!o.hallStaff)d.hallStaff=null;}d.deco=Object.assign({},DEF.deco,o.deco||{});while(d.modes.length<d.tiers.length)d.modes.push('free');if(o.storeEarn==null)d.storeEarn=d.total||0;return clampS(d);}}catch(e){}return fresh();}
 function save(){S.last=Date.now();if(tables.length)S.tb=tables.map(t=>({d:+t.dirt.toFixed(2),b:t.broken?1:0,m:t.manual?1:0}));if(S.shops)S.shops[S.active]=snapShop(S);try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
 let S;S=load();if(!S.cands)S.cands={};REG=REGS[S.stage||0];
 
 const tierOf=tb=>tb.manual?0:S.tiers[tb.slot];
-const feePer=tb=>Math.round(40*(1+0.25*S.fee)*TIERS[tierOf(tb)].mult*ST().fee);
-const drinkPrice=()=>Math.round(50*(1+0.35*(S.drink-1))*ST().fee);
-const foodPrice=()=>Math.round(140*(1+0.35*(S.food-1))*ST().fee);
+const feePer=tb=>Math.round(40*(1+0.1*S.fee)*TIERS[tierOf(tb)].mult*ST().fee);
+const drinkPrice=()=>Math.round(50*(1+0.14*(S.drink-1))*ST().fee);
+const foodPrice=()=>Math.round(140*(1+0.14*(S.food-1))*ST().fee);
 const proOn=()=>Date.now()<S.proUntil;
 const DECO_SCALE=0.35; // 内装の来店効果の強さ(全部最高で約+70%)
-const decoBonus=()=>Object.keys(DECO).reduce((a,k)=>a+S.deco[k]*DECO[k].b,0)*DECO_SCALE;
+const decoBonus=()=>Object.keys(DECO).reduce((a,k)=>a+S.deco[k]*DECO[k].b/DECO_STEP,0)*DECO_SCALE;
 const repMult=()=>0.5+0.2*S.rep;
 const hourNow=()=>Math.min(23,Math.floor(S.clock/60));
 const BASE_INTERVAL=6.5; // 来店間隔の基準(秒)
 const interval=()=>BASE_INTERVAL/(Date.now()<(S.boostUntil||0)?2:1)/(1+decoBonus())/(proOn()?2:1)/HOURS[hourNow()][0]/repMult()/ST().traffic;
-const setRate=tb=>Math.round(500*(1+0.25*S.fee)*(1+0.3*tierOf(tb))*ST().fee);
+const setRate=tb=>Math.round(500*(1+0.1*S.fee)*(1+0.3*tierOf(tb))*ST().fee);
 function addRep(d){S.rep=Math.max(1,Math.min(5,S.rep+d));}
 function pickType(mix){let r=Math.random(),a=0;for(const k of['s','w','g']){a+=mix[k];if(r<a)return k;}return 'g';}
 
@@ -857,7 +875,7 @@ function update(dt){
       if(Math.random()<dt*6)burst(s.x+rnd(-12,12),s.y+rnd(-12,12),2,['#ffe27a','#ffffff']);
       if(e.timer<=0){fixTable(e.tb);leave(e);}}
   });
-  if(S.deco.speaker){noteT-=dt;if(noteT<=0){noteT=1.6/S.deco.speaker;const sp=[[16,158],[W-18,372],[16,308],[W-18,158]].slice(0,S.deco.speaker>=3?4:2);const p=pick(sp);floats.push({x:p[0],y:p[1],text:'♪',t:0,c:'#ffffff',small:1});}}
+  if(dg('speaker')){noteT-=dt;if(noteT<=0){noteT=1.6/dg('speaker');const sp=[[16,158],[W-18,372],[16,308],[W-18,158]].slice(0,dg('speaker')>=3?4:2);const p=pick(sp);floats.push({x:p[0],y:p[1],text:'♪',t:0,c:'#ffffff',small:1});}}
   floats.forEach(f=>f.t+=dt);floats=floats.filter(f=>f.t<1.4);
   parts.forEach(p=>{p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=.96;p.vy=p.vy*.96+30*dt;p.life-=dt;});parts=parts.filter(p=>p.life>0);
   if(shake>0)shake-=dt;
@@ -886,10 +904,10 @@ function label(t,x,y,size,col){ctx.fillStyle=col||'rgba(255,255,255,.4)';ctx.fon
 function dashed(x,y,w,h){ctx.save();ctx.setLineDash([4,4]);ctx.strokeStyle='rgba(255,255,255,.28)';ctx.lineWidth=1.5;rr(x,y,w,h,6);ctx.stroke();ctx.restore();}
 function drawFloor(){
   drawFloorPattern();
-  const ga=[.16,.3,.38,.46][S.deco.light];
+  const ga=[.16,.3,.38,.46][dg('light')];
   tables.forEach(tb=>{const s=SLOTS[tb.slot];const g=ctx.createRadialGradient(s.x,s.y,10,s.x,s.y,90);g.addColorStop(0,`rgba(255,236,190,${ga})`);g.addColorStop(1,'rgba(255,236,190,0)');ctx.fillStyle=g;ctx.fillRect(s.x-90,s.y-90,180,180);});
-  if(S.deco.light){ctx.fillStyle=`rgba(255,190,110,${.04+.02*S.deco.light})`;ctx.fillRect(0,0,W,HI);}
-  if(S.deco.light>=3){for(let i=0;i<6;i++){const x=DOOR+Math.cos(gt*.7+i)*22,y=300+Math.sin(gt*.7+i)*10;ctx.fillStyle=`rgba(255,240,200,${.25+.2*Math.sin(gt*3+i)})`;ctx.fillRect(x,y,2,2);}}
+  if(dg('light')){ctx.fillStyle=`rgba(255,190,110,${.04+.02*dg('light')})`;ctx.fillRect(0,0,W,HI);}
+  if(dg('light')>=3){for(let i=0;i<6;i++){const x=DOOR+Math.cos(gt*.7+i)*22,y=300+Math.sin(gt*.7+i)*10;ctx.fillStyle=`rgba(255,240,200,${.25+.2*Math.sin(gt*3+i)})`;ctx.fillRect(x,y,2,2);}}
   // 待合室(カウンター前)
   if(S.wait){ctx.fillStyle='#4b3d5c';rr(8,8,144,92,6);ctx.fill();ctx.strokeStyle='#6a587e';ctx.lineWidth=1;ctx.stroke();
     [26,90].forEach(x=>{ctx.fillStyle='#5a2a36';rr(x-3,66,60,26,6);ctx.fill();ctx.fillStyle='#8a3d4e';rr(x+2,68,50,17,5);ctx.fill();
@@ -928,30 +946,30 @@ function drawFloor(){
   ctx.fillRect(0,HI-6,DOOR-24,6);ctx.fillRect(DOOR+24,HI-6,W-DOOR-24,6);
   // ドリンク棚(カウンター奥の壁)
   ctx.fillStyle='#39404d';ctx.fillRect(COUNTER_X+6,5,88,6);
-  if(S.drink){const dc=['#e04b4b','#f0c040','#4bb0e0','#6ad06a','#f08a3c'];const nd=Math.min(4+S.drink*3,17);for(let i=0;i<nd;i++){ctx.fillStyle=dc[i%5];ctx.fillRect(COUNTER_X+8+i*5,6,3,4);}}
+  if(S.drink){const dc=['#e04b4b','#f0c040','#4bb0e0','#6ad06a','#f08a3c'];const nd=Math.min(4+Math.ceil(S.drink*1.2),17);for(let i=0;i<nd;i++){ctx.fillStyle=dc[i%5];ctx.fillRect(COUNTER_X+8+i*5,6,3,4);}}
   // カウンター
   ctx.fillStyle='#4a2f1c';rr(COUNTER_X,34,98,24,3);ctx.fill();ctx.fillStyle='#6b4428';rr(COUNTER_X,34,98,8,3);ctx.fill();
   ctx.fillStyle='#222';rr(COUNTER_X+58,30,20,14,2);ctx.fill();ctx.fillStyle='#7fe0a0';ctx.fillRect(COUNTER_X+61,32,14,4);
   tag('待合',40,24,'#23272f','#e8ecf2',8);tag('受付',COUNTER_X+14,65,'#23272f','#e8ecf2',8);if(S.food)tag('厨房',W-78,14,'#23272f','#e8ecf2',7);
   // 内装小物
-  const pl=[[W-16,248],[12,364],[W-16,CY]];for(let i=0;i<S.deco.plant;i++){const[x,y]=pl[i];ctx.save();ctx.translate(x,y);const sc=S.deco.plant>=3?1.3:1;ctx.scale(sc,sc);ctx.translate(-x,-y);
+  const pl=[[W-16,248],[12,364],[W-16,CY]];for(let i=0;i<dg('plant');i++){const[x,y]=pl[i];ctx.save();ctx.translate(x,y);const sc=dg('plant')>=3?1.3:1;ctx.scale(sc,sc);ctx.translate(-x,-y);
     ctx.fillStyle='#5a3a22';ctx.beginPath();ctx.arc(x,y,7,0,7);ctx.fill();ctx.fillStyle='#2f8a4a';for(let a=0;a<6;a++){ctx.beginPath();ctx.ellipse(x+Math.cos(a)*6,y+Math.sin(a)*6,6,3,a,0,7);ctx.fill();}ctx.restore();}
-  if(S.deco.clock===1){ctx.fillStyle='#f4f1e8';ctx.beginPath();ctx.arc(182,6,6,0,7);ctx.fill();ctx.strokeStyle='#222';ctx.lineWidth=1;ctx.stroke();
+  if(dg('clock')===1){ctx.fillStyle='#f4f1e8';ctx.beginPath();ctx.arc(182,6,6,0,7);ctx.fill();ctx.strokeStyle='#222';ctx.lineWidth=1;ctx.stroke();
     ctx.beginPath();ctx.moveTo(182,6);ctx.lineTo(182+Math.cos(gt*.5)*4,6+Math.sin(gt*.5)*4);ctx.stroke();}
-  else if(S.deco.clock===2){ctx.fillStyle='#6b4428';rr(174,2,16,22,3);ctx.fill();ctx.fillStyle='#f4f1e8';ctx.beginPath();ctx.arc(182,9,5,0,7);ctx.fill();
+  else if(dg('clock')===2){ctx.fillStyle='#6b4428';rr(174,2,16,22,3);ctx.fill();ctx.fillStyle='#f4f1e8';ctx.beginPath();ctx.arc(182,9,5,0,7);ctx.fill();
     ctx.strokeStyle='#c8a04a';ctx.lineWidth=1;ctx.beginPath();const sw=Math.sin(gt*3)*3;ctx.moveTo(182,14);ctx.lineTo(182+sw,21);ctx.stroke();ctx.fillStyle='#c8a04a';ctx.beginPath();ctx.arc(182+sw,21,1.8,0,7);ctx.fill();}
-  else if(S.deco.clock>=3){ctx.fillStyle='#111';rr(164,2,36,12,2);ctx.fill();const cm=Math.floor(Math.min(S.clock,1439));
+  else if(dg('clock')>=3){ctx.fillStyle='#111';rr(164,2,36,12,2);ctx.fill();const cm=Math.floor(Math.min(S.clock,1439));
     label(String(Math.floor(cm/60)).padStart(2,'0')+':'+String(cm%60).padStart(2,'0'),182,8.5,8,'#63ff9a');}
-  if(S.deco.speaker){const sz=S.deco.speaker>=2?1.4:1,sp=[[4,150],[W-13,364]].concat(S.deco.speaker>=3?[[4,300],[W-13,150]]:[]);
+  if(dg('speaker')){const sz=dg('speaker')>=2?1.4:1,sp=[[4,150],[W-13,364]].concat(dg('speaker')>=3?[[4,300],[W-13,150]]:[]);
     sp.forEach(([x,y])=>{ctx.fillStyle='#111';rr(x,y,9,14*sz,2);ctx.fill();ctx.fillStyle='#555';ctx.beginPath();ctx.arc(x+4.5,y+7*sz,3,0,7);ctx.fill();});}
-  if(S.deco.purifier){const big=S.deco.purifier>=2,u=[[W-28,118]].concat(S.deco.purifier>=3?[[8,236]]:[]);
+  if(dg('purifier')){const big=dg('purifier')>=2,u=[[W-28,118]].concat(dg('purifier')>=3?[[8,236]]:[]);
     u.forEach(([x,y])=>{const w=big?18:14;ctx.fillStyle='#f2f4f5';rr(x-(w-14),y,w,w,3);ctx.fill();ctx.fillStyle=`rgba(90,180,255,${.6+.4*Math.sin(gt*2)})`;ctx.fillRect(x-(w-14)+3,y+3,w-6,2);});}
-  if(S.deco.art){const fr=S.deco.art>=2?'#e0b44a':'#8a5a34',hh=S.deco.art>=2?56:36;
+  if(dg('art')){const fr=dg('art')>=2?'#e0b44a':'#8a5a34',hh=dg('art')>=2?56:36;
     const pic=(x,c1,c2)=>{ctx.fillStyle=fr;const ay=HI-136;ctx.fillRect(x,ay,7,hh);ctx.fillStyle=c1;ctx.fillRect(x+1,ay+2,5,hh-4);ctx.fillStyle=c2;ctx.fillRect(x+1,ay+14,5,10);};
-    pic(4,'#2f5f8a','#e0a526');if(S.deco.art>=3)pic(W-11,'#7a1f2e','#f4f1e8');}
+    pic(4,'#2f5f8a','#e0a526');if(dg('art')>=3)pic(W-11,'#7a1f2e','#f4f1e8');}
   // 入口マットとネオン
   ctx.fillStyle='#3a2a4a';rr(AISLE-22,HI-20,44,14,3);ctx.fill();
-  const fl=.85+.15*Math.sin(gt*9)*(Math.random()>.97?0:1),ng=S.deco.neon;
+  const fl=.85+.15*Math.sin(gt*9)*(Math.random()>.97?0:1),ng=dg('neon');
   const hue=ng>=3?(gt*60)%360:350,col=a=>`hsla(${hue},100%,${ng>=3?65:62}%,${a})`;
   ctx.save();ctx.shadowColor=col(1);ctx.shadowBlur=[12,20,28,32][ng]*fl;ctx.strokeStyle=col(fl);ctx.lineWidth=2;
   if(ng>=2){const nm=shopName().slice(0,8),nw=Math.max(70,nm.length*10+10);rr(AISLE+28,HI-4,nw,16,5);ctx.stroke();label(nm,AISLE+28+nw/2,HI+4.5,10,col(fl));}
@@ -1156,7 +1174,7 @@ cv.addEventListener('pointerdown',ev=>{const r=cv.getBoundingClientRect(),x=(ev.
   if(bossCmd(x,y))return;
   tables.forEach(tb=>{const s=SLOTS[tb.slot];if(Math.hypot(x-s.x,y-s.y)>=38)return;
     if(tb.broken){repairMenu(tb);return;}
-    if(tb.state==='play'){tb.t+=1;tb.tap=1;burst(s.x,s.y,6,['#ffffff','#ffd35a']);}
+    if(tb.state==='play'){tb.t+=1;tb.tap=1;tutTap++;burst(s.x,s.y,6,['#ffffff','#ffd35a']);}
     else if(tb.manual)repairMenu(tb);});});
 
 // ---------- UI ----------
@@ -1164,8 +1182,8 @@ const no=()=>null;
 const ROW={
   addTable:{name:'卓を増やす',lv:()=>tables.length+'卓',cost:()=>Math.round(500*Math.pow(2.6,tables.length-2)),max:()=>tables.length>=ST().max,lock:no,rerender:1,
     desc:()=>tables.length>=ST().max?`この店は${ST().max}卓で満卓です`:`手積み卓を追加。いま ${tables.length}/${ST().max}卓`,buy(){S.tiers.push(0);S.modes.push('free');addTable();toast('卓を増やしました');}},
-  fee:{name:'場代',lv:()=>'Lv'+S.fee,cost:()=>Math.round(80*Math.pow(1.8,S.fee)),max:()=>false,lock:no,
-    desc:()=>`フリー1人 ¥${fmt(40*(1+0.25*S.fee)*ST().fee)}/半荘、セット ¥${fmt(500*(1+0.25*S.fee)*ST().fee)}/時間から`,buy(){S.fee++;}},
+  fee:{name:'場代',lv:()=>'Lv'+S.fee,cost:()=>Math.round(32*Math.pow(1.265,S.fee)),max:()=>false,lock:no,
+    desc:()=>`フリー1人 ¥${fmt(40*(1+0.1*S.fee)*ST().fee)}/半荘、セット ¥${fmt(500*(1+0.1*S.fee)*ST().fee)}/時間から`,buy(){S.fee++;}},
   wait:{name:'待合室',lv:()=>S.wait?'開放済み':'',cost:()=>800,max:()=>!!S.wait,lock:no,
     desc:()=>'満席のときにお客さんが4人まで待てます',buy(){S.wait=1;toast('待合室を開放しました');}},
   mag:{name:'雑誌',lv:()=>S.mag?'設置済み':'',cost:()=>300,max:()=>!!S.mag,lock:no,
@@ -1174,9 +1192,9 @@ const ROW={
     desc:()=>'待合室で待てる時間 +20秒',buy(){S.manga=1;}},
   tv:{name:'テレビ',lv:()=>S.tv?'設置済み':'',cost:()=>1500,max:()=>!!S.tv,lock:no,
     desc:()=>'待合室で待てる時間 +20秒',buy(){S.tv=1;}},
-  drink:{name:'ドリンク',lv:()=>S.drink?'Lv'+S.drink:'',cost:()=>Math.round(250*Math.pow(1.9,S.drink)),max:()=>false,lock:no,
+  drink:{name:'ドリンク',lv:()=>S.drink?'Lv'+S.drink:'',cost:()=>S.drink?Math.round(190*Math.pow(1.293,S.drink-1)):250,max:()=>false,lock:no,
     desc:()=>S.drink?`1杯 ¥${fmt(drinkPrice())}。半荘中に注文が入ります`:'半荘中にドリンクの注文が入るようになります',buy(){S.drink++;}},
-  food:{name:'フード',lv:()=>S.food?'Lv'+S.food:'',cost:()=>Math.round(1500*Math.pow(1.9,S.food)),max:()=>false,lock:no,
+  food:{name:'フード',lv:()=>S.food?'Lv'+S.food:'',cost:()=>S.food?Math.round(1140*Math.pow(1.293,S.food-1)):1500,max:()=>false,lock:no,
     desc:()=>S.food?`1品 ¥${fmt(foodPrice())}。厨房で作って運びます`:'厨房を開けて、フードの注文を受けます',buy(){if(!S.food)toast('厨房を開けました');S.food++;}},
   mgr:{name:'店長代行',lv:()=>`${OFFCAP[S.mgr||0]}時間`,cost:()=>Math.round(4000*Math.pow(8,S.mgr||0)),max:()=>(S.mgr||0)>=OFFCAP.length-1,lock:no,
     desc:()=>(S.mgr||0)>=OFFCAP.length-1?`留守中も最大${OFFCAP[OFFCAP.length-1]}時間分営業します`:`留守中に営業できる時間を${OFFCAP[S.mgr||0]}時間から${OFFCAP[(S.mgr||0)+1]}時間に延ばします`,buy(){S.mgr=(S.mgr||0)+1;}},
@@ -1195,10 +1213,11 @@ function tableRow(i){return{name:`${i+1}番卓`,lv:()=>TIERS[S.tiers[i]].short,
       toast(`${i+1}番卓を${S.modes[i]==='set'?'セット卓(4人組の時間貸し)':'フリー卓(1人客を組み合わせ)'}にしました`);}},cost:()=>upCost(i,S.tiers[i]),max:()=>S.tiers[i]>=2,lock:no,
   desc:()=>{const t=S.tiers[i];if(tables[i].broken)return t<2?'故障中。入れ替えるか、修理ボタンから対応を選べます':'故障中。修理ボタンから対応を選べます';if(tables[i].manual)return'全自動が止まり、手積みで営業中';if(t>=2)return`${TIERS[2].name}。半荘${TIERS[2].dur}秒、場代×${TIERS[2].mult}`;const n=TIERS[t+1];return`${n.name}へ。半荘${TIERS[t].dur}→${n.dur}秒、場代×${n.mult}`;},
   buy(){S.tiers[i]++;tables[i].broken=false;tables[i].manual=false;tables[i].repairing=false;const s=SLOTS[i];burst(s.x,s.y,24,['#ffd35a','#fff']);toast(`${i+1}番卓を${TIERS[S.tiers[i]].name}に入れ替えました`);}};}
-function decoRow(k){const d=DECO[k];return{name:d.name,lv:()=>S.deco[k]?`${d.grades[S.deco[k]-1]} (${S.deco[k]}/${d.max})`:'',
-  cost:()=>Math.round(d.c*Math.pow(d.g,S.deco[k])),max:()=>S.deco[k]>=d.max,lock:no,
-  desc:()=>S.deco[k]>=d.max?`最高グレード。来店ペース +${Math.round(d.b*100*d.max)}%`:`${S.deco[k]?'次は':''}${d.grades[S.deco[k]]}。来店ペース +${Math.round(d.b*100*(S.deco[k]+1))}%${S.deco[k]?`(いま +${Math.round(d.b*100*S.deco[k])}%)`:''}`,
-  buy(){S.deco[k]++;toast(`${d.name}を「${d.grades[S.deco[k]-1]}」にしました`);}};}
+function decoRow(k){const d=DECO[k],L=()=>S.deco[k],pc=n=>+(d.b*100*n/DECO_STEP).toFixed(1);return{key:'deco:'+k,name:d.name,lv:()=>L()?`${d.grades[dg(k)-1]} (${L()}/${d.max})`:'',
+  cost:()=>Math.round(d.c1*Math.pow(d.gs,L())),max:()=>L()>=d.max,lock:no,
+  desc:()=>{const n=L();if(n>=d.max)return`最高グレード。来店ペース +${pc(n)}%`;const up=n%DECO_STEP===0;
+    return`${up?(n?'次は':'')+d.grades[n/DECO_STEP]+'。':''}来店ペース +${pc(n+1)}%${n?`(いま +${pc(n)}%)`:''}`;},
+  buy(){S.deco[k]++;const n=L();if(n%DECO_STEP===1)toast(`${d.name}を「${d.grades[dg(k)-1]}」にしました`);else toast(`${d.name}を強化しました(${n}/${d.max})`);}};}
 function tabRows(){
   if(tab==='table'){const r=[ROW.addTable,ROW.fee];tables.forEach((_,i)=>r.push(tableRow(i)));return r;}
   if(tab==='fac')return[ROW.mgr,ROW.mag,ROW.manga,ROW.tv,ROW.drink,ROW.food,ROW.broom,ROW.maint];
@@ -1524,10 +1543,51 @@ function skipStory(){if(!storyCur)return;const cb=storyCur.onDone;storyCur=null;
 document.getElementById('story').onclick=ev=>{if(ev.target.id==='stSkip')return;advanceStory();};
 document.getElementById('stSkip').onclick=skipStory;
 
+// ---------- チュートリアル(1号店の開店後、田中さんの話が終わったら) ----------
+// S.tut: 0=まだ 1〜=進行中のステップ -1=完了
+let tutTap=0,tutBase=null;
+const coachRing=document.getElementById('coachRing'),coachTip=document.getElementById('coachTip');
+function canvasRect(x,y,half){const r=cv.getBoundingClientRect(),h=Math.max(half*scale,22);return{left:r.left+x*scale-h,top:r.top+y*scale-h,width:h*2,height:h*2};}
+// 下部パネルの項目:タブが違うか閉じていればタブのボタンを、開いていれば購入ボタンを示す
+function tabEl(t,key){const nb=document.querySelector(`nav button[data-tab="${t}"]`);if(tab!==t||sheetEl.classList.contains('collapsed'))return nb;
+  const r=rows.find(r=>r.u&&(r.u===key||r.u.key===key));if(!r)return nb;if(!r.btn._sv){r.btn._sv=1;r.btn.scrollIntoView({block:'nearest'});}return r.btn;}
+const TUT=[
+  {t:'お客さんが3人そろうと、メンバーが4人目に入って半荘が始まります。まずは様子を見てみましょう。',
+    rect:()=>tables[0]&&canvasRect(SLOTS[0].x,SLOTS[0].y,46),done:()=>tables.some(t=>t.state==='play')||S.games>0},
+  {t:'対局中の卓をタップすると、半荘が少し早く進みます。3回タップしてみましょう。',
+    rect:()=>{const tb=tables.find(t=>t.state==='play');return tb&&canvasRect(SLOTS[tb.slot].x,SLOTS[tb.slot].y,46);},done:()=>tutTap>=3},
+  {t:'「卓」タブの「場代」を上げると、半荘ごとの収入が増えます。1回上げてみましょう。',
+    el:()=>tabEl('table',ROW.fee),done:()=>S.fee>tutBase.fee},
+  {t:'「内装」タブで観葉植物を置くと、お客さんの来るペースが上がります。',
+    el:()=>tabEl('deco','deco:plant'),done:()=>S.deco.plant>tutBase.plant},
+  {t:'黄色い輪の人があなた(店長)です。注文の出ているお客さんや汚れた卓をタップすると、店長がその仕事を優先します。',
+    rect:()=>{const b=ents.find(e=>e.type==='boss');return b&&canvasRect(b.x,b.y,18);},next:1},
+  {t:'画面上の目標(売上と評判)を達成すると、次の街に2号店を出せます。場代や内装を少しずつ上げて、お店を育てていきましょう!',
+    el:()=>document.getElementById('goal'),next:1}
+];
+function tutNext(){S.tut++;tutBase=null;tutTap=0;coachTip._s=null;if(S.tut>TUT.length){S.tut=-1;toast('チュートリアル完了! いい店にしていきましょう');}save();}
+function tutUpdate(){
+  if(S.tut===0&&S.stage===0&&S.opened&&(S.story||{}).ch0_open&&!storyOpen()){S.tut=1;save();}
+  const on=S.tut>0&&S.opened&&!storyOpen()&&S.closing!==2&&!modal.classList.contains('show')&&!document.getElementById('map').classList.contains('show');
+  if(!on){coachRing.style.display=coachTip.style.display='none';return;}
+  const st=TUT[S.tut-1];if(!st){S.tut=-1;save();return;}
+  if(!tutBase)tutBase={fee:S.fee,plant:S.deco.plant};
+  if(st.done&&st.done()){tutNext();return;}
+  if(coachTip._s!==S.tut){coachTip._s=S.tut;
+    coachTip.innerHTML=`<div class="ct-h">チュートリアル ${S.tut}/${TUT.length}</div><div>${st.t}</div><div class="ct-b"><button type="button" class="ct-skip">スキップ</button>${st.next?'<button type="button" class="ct-next">次へ</button>':''}</div>`;
+    coachTip.querySelector('.ct-skip').onclick=()=>{S.tut=-1;save();};const nx=coachTip.querySelector('.ct-next');if(nx)nx.onclick=tutNext;}
+  let r=null;if(st.rect)r=st.rect();else if(st.el){const e=st.el();if(e&&e.offsetParent)r=e.getBoundingClientRect();}
+  coachTip.style.display='block';const vh=window.innerHeight;
+  if(r){const p=4;Object.assign(coachRing.style,{display:'block',left:r.left-p+'px',top:r.top-p+'px',width:r.width+p*2+'px',height:r.height+p*2+'px'});
+    if(r.top+r.height/2>vh*.5){coachTip.style.top='';coachTip.style.bottom=Math.min(vh-120,vh-r.top+14)+'px';}
+    else{coachTip.style.bottom='';coachTip.style.top=Math.min(vh-160,r.top+r.height+14)+'px';}}
+  else{coachRing.style.display='none';coachTip.style.bottom='';coachTip.style.top='18%';}
+}
+
 // ---------- loop ----------
 let last=performance.now(),acc=0;
 function loop(t){const dt=Math.max(0,Math.min((t-last)/1000,.1));last=t;if(S.started&&S.opened&&!storyOpen())update(dt);else{gt+=dt;updateOutside(dt);}tables.forEach(tb=>{if(tb.tap>0)tb.tap-=dt*3;});
-  if(S.started)draw();document.getElementById('money').textContent='¥'+fmt(S.money);drawTimebar();
+  if(S.started)draw();tutUpdate();document.getElementById('money').textContent='¥'+fmt(S.money);drawTimebar();
   acc+=dt;if(acc>.25){acc=0;refresh();}requestAnimationFrame(loop);}
 {const iv=document.getElementById('intro');for(let i=0;i<14;i++){const p=document.createElement('i');p.className='petal';
   p.style.cssText=`left:${Math.random()*110}%;animation-duration:${7+Math.random()*6}s;animation-delay:${-Math.random()*12}s;width:${7+Math.random()*6}px;height:${6+Math.random()*4}px`;iv.appendChild(p);}
