@@ -1,0 +1,1467 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>雀荘経営 プロトタイプ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=DotGothic16&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#e6ede8; --panel:#ffffff; --panel2:#f2f6f3; --ink:#13241c; --sub:#55665d;
+  --line:#cfdad3; --accent:#1e7a57; --accent-ink:#ffffff; --gold:#b87712; --stage:#1b2230;
+  --disabled:#b9c4be;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e1712; --panel:#16241d; --panel2:#1c2d25; --ink:#e4eee8; --sub:#9db2a7;
+    --line:#284035; --accent:#3fb382; --accent-ink:#06140e; --gold:#ffb52e; --stage:#0a0f16;
+    --disabled:#3a4d44;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e1712; --panel:#16241d; --panel2:#1c2d25; --ink:#e4eee8; --sub:#9db2a7;
+  --line:#284035; --accent:#3fb382; --accent-ink:#06140e; --gold:#ffb52e; --stage:#0a0f16;
+  --disabled:#3a4d44;
+}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);}
+*,*::before,*::after{box-sizing:inherit}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{height:100%;margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",system-ui,sans-serif;
+  -webkit-tap-highlight-color:transparent;overflow:hidden}
+#app{height:100%;max-width:520px;margin:0 auto;display:flex;flex-direction:column;position:relative}
+header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding:10px 14px 8px}
+.shop{font-size:13px;color:var(--sub);font-weight:700}
+.money{font-family:"Dela Gothic One","Hiragino Sans",sans-serif;font-size:30px;line-height:1.05;letter-spacing:.01em}
+.rate{font-size:13px;color:var(--sub);margin-top:2px}
+#rushBtn{border:0;border-radius:999px;padding:10px 14px;font:inherit;font-weight:700;font-size:13px;
+  background:var(--gold);color:#1b1206;cursor:pointer;min-height:44px;white-space:nowrap}
+#rushBtn.on{background:transparent;color:var(--gold);box-shadow:inset 0 0 0 2px var(--gold)}
+#stage{flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center;background:var(--stage);position:relative;overflow:hidden}
+canvas{display:block;touch-action:manipulation}
+#sheet{flex:0 0 auto;height:36%;min-height:210px;display:flex;flex-direction:column;background:var(--panel);border-top:1px solid var(--line)}
+nav{display:flex;border-bottom:1px solid var(--line)}
+nav button{flex:1;border:0;background:none;font:inherit;font-weight:700;font-size:13px;color:var(--sub);padding:12px 0;cursor:pointer;border-bottom:3px solid transparent;min-height:44px}
+nav button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+#list{flex:1;overflow-y:auto;padding:6px 12px 12px}
+.row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:10px 2px;border-bottom:1px solid var(--line)}
+.stats{display:flex;flex-wrap:wrap;gap:2px 10px;font-size:11.5px;color:var(--sub);margin-top:3px}
+.stats i{font-style:normal;color:var(--gold);margin-left:3px;letter-spacing:-1px}
+.cand{display:block;width:100%;text-align:left;border:1.5px solid var(--line);background:var(--panel2);color:var(--ink);border-radius:12px;padding:10px 12px;margin-top:8px;font:inherit;cursor:pointer;min-height:44px}
+.cand b{font-size:15px}
+.cand:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.nm small.sst{color:var(--accent)}
+.mcard{max-height:92vh;overflow-y:auto}
+.xp{display:inline-block;width:22px;height:4px;background:var(--line);border-radius:2px;margin-left:4px;overflow:hidden;vertical-align:middle}
+.xp b{display:block;height:100%;background:var(--accent)}
+.btns{display:flex;flex-direction:column;gap:6px}
+.cand:disabled{opacity:.5;cursor:default}
+.cand .dots{font-style:normal;color:var(--gold);margin-left:6px}
+.cand .tc{float:right;font-weight:700}
+.lk{opacity:.22}
+#goal{display:flex;align-items:center;gap:6px 10px;padding:0 14px 8px;font-size:12.5px;color:var(--sub);flex-wrap:wrap}
+#goal span{flex:1 1 auto}
+#goal i{display:block;flex:1 0 100%;height:5px;background:var(--line);border-radius:3px;overflow:hidden}
+#goal i b{display:block;height:100%;background:var(--gold)}
+#goal.done{color:var(--ink);font-weight:700}
+#goal button{border:0;border-radius:999px;background:var(--gold);color:#1b1206;font:inherit;font-weight:700;padding:8px 16px;min-height:40px;cursor:pointer}
+#goal button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+#timebar{display:flex;align-items:center;gap:10px;padding:0 14px 8px}
+.tb-track{position:relative;flex:1;display:flex;height:18px;border-radius:9px;overflow:hidden}
+.tb-band{display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;color:#3a2a10}
+.tb-band.night{color:#e8ecff}
+#tbPast{position:absolute;left:0;top:0;bottom:0;width:0;background:rgba(20,20,30,.38)}
+#tbMark{position:absolute;top:-2px;bottom:-2px;width:3px;margin-left:-1.5px;background:#fff;box-shadow:0 0 0 1.5px #1b1206;border-radius:2px}
+#map{position:fixed;inset:0;z-index:9;display:none;flex-direction:column;background:#9fc3d6;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+#map.show{display:flex}
+.map-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:rgba(10,30,50,.55);color:#fff}
+.map-title{font-family:"Dela Gothic One",sans-serif;font-size:20px}
+.map-sub{font-size:12.5px;opacity:.85;margin-top:2px}
+#mapClose{border:1.5px solid rgba(255,255,255,.7);background:transparent;color:#fff;border-radius:999px;padding:8px 14px;min-height:40px;font:inherit;font-weight:700;cursor:pointer}
+.map-body{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:6px}
+#mapSvg{width:100%;height:100%;max-width:560px}
+#mapSvg .pin{cursor:pointer}
+#mapSvg .pin:focus-visible{outline:none}
+#mapSvg .pin:focus-visible circle.ring{stroke:#fff;stroke-width:3}
+.map-panel{background:var(--panel);color:var(--ink);padding:14px 16px 16px;border-radius:16px 16px 0 0;box-shadow:0 -6px 20px rgba(0,0,0,.2)}
+.map-panel h3{margin:0;font-size:17px}
+.map-panel .mp-sub{font-size:13px;color:var(--sub);margin:2px 0 10px}
+.map-panel .mp-grid{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13.5px;margin-bottom:12px}
+.map-panel .mp-grid span{color:var(--sub)}
+.map-panel .mbtn{margin-top:6px}
+@keyframes pinPulse{0%{r:9;opacity:.9}100%{r:22;opacity:0}}
+#mapSvg .pulse{animation:pinPulse 1.4s ease-out infinite}
+@media (prefers-reduced-motion: reduce){#mapSvg .pulse{animation:none}}
+
+/* ===== スマホ縦画面向けレイアウト ===== */
+html,body{height:100%;height:100dvh}
+body{touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+#app{height:100%;max-width:560px}
+header{display:block;padding:8px 14px 6px}
+.hd-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.money{font-size:28px;line-height:1.1}
+#rushBtn{min-height:44px;padding:0 16px;font-size:14px}
+.hd-sub{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;color:var(--sub);margin-top:2px;white-space:nowrap}
+.hd-sub .shop,.hd-sub .rate{font-size:12.5px;margin:0;overflow:hidden;text-overflow:ellipsis}
+#timebar{padding:2px 14px 6px}
+.tb-track{height:20px;border-radius:10px}
+#goal{padding:0 14px 8px;font-size:12px;gap:4px 10px;flex-wrap:nowrap}
+#goal span{flex:0 1 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#goal i{flex:1 1 40px;min-width:40px;height:6px}
+#goal.done{flex-wrap:wrap}
+#goal.done span{white-space:normal}
+#goal button{min-height:44px;padding:0 18px;font-size:14px}
+#sheet{height:auto;min-height:0;flex:0 0 auto;border-top:0;border-radius:16px 16px 0 0;box-shadow:0 -4px 16px rgba(0,0,0,.18);position:relative;z-index:2}
+#sheet #list{flex:0 0 auto;height:30vh;height:30dvh;max-height:340px;overscroll-behavior:contain}
+#sheet.collapsed #list{display:none}
+#sheetToggle{display:flex;align-items:center;justify-content:center;width:100%;height:18px;border:0;background:none;cursor:pointer;padding:0}
+#sheetToggle span{width:40px;height:5px;border-radius:3px;background:var(--line)}
+nav{border-bottom:1px solid var(--line)}
+nav button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:52px;padding:4px 0 6px;font-size:11px;border-bottom-width:3px}
+nav button svg{display:block}
+#stage{min-height:0}
+.row{padding:10px 2px;min-height:60px}
+.nm{font-size:15px}
+.ds{font-size:12.5px;line-height:1.45}
+.buy{min-width:96px;min-height:48px;font-size:15px}
+.alt{min-height:48px;min-width:72px}
+.mbtn{min-height:52px;font-size:16px}
+.mcard{padding:22px 18px}
+#mapClose{min-height:44px;padding:0 16px}
+#bonus{min-height:48px;font-size:14px;max-width:calc(100% - 24px);white-space:normal}
+#toast{max-width:calc(100% - 24px);white-space:normal;text-align:center;font-size:13px}
+@media (max-height:700px){.money{font-size:24px}header{padding-top:6px}.hd-sub{font-size:12px}#sheet #list{height:26vh;height:26dvh}}
+.hd-btns{display:flex;align-items:center;gap:8px}
+#mapOpen{width:44px;height:44px;flex:none;border:0;border-radius:50%;background:var(--panel2);color:var(--ink);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:inset 0 0 0 1.5px var(--line)}
+#mapOpen:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+#bossName{width:100%;min-height:48px;font:inherit;font-size:17px;padding:0 14px;border-radius:12px;border:1.5px solid var(--line);background:var(--panel2);color:var(--ink);-webkit-user-select:text;user-select:text;margin-top:4px}
+#bossName:focus{outline:3px solid var(--gold);outline-offset:1px}
+.nm-hint{font-size:12px!important;margin:6px 0 4px!important;text-align:left}
+#cv{image-rendering:pixelated}
+#openOv{position:absolute;inset:0;z-index:8;display:none;align-items:center;justify-content:center;background:rgba(8,10,20,.55)}
+#openOv.show{display:flex}
+.oo-card{position:relative;background:var(--panel);color:var(--ink);border-radius:18px;padding:30px 22px 20px;width:min(86%,340px);text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.4);overflow:hidden}
+.oo-ribbon{position:absolute;left:0;right:0;top:12px;height:8px;background:linear-gradient(90deg,#c0392b,#e74c3c,#c0392b)}
+.oo-place{font-size:13px;color:var(--sub);margin-top:8px}
+.oo-name{font-family:"DotGothic16","Dela Gothic One",sans-serif;font-size:28px;margin:6px 0 8px;line-height:1.2}
+.oo-card p{font-size:13px;color:var(--sub);margin:0 0 16px}
+#ooBtn{width:100%;min-height:56px;border:0;border-radius:14px;background:linear-gradient(#e0473a,#b8231a);color:#fff;font:inherit;font-weight:700;font-size:20px;letter-spacing:.2em;cursor:pointer;box-shadow:0 4px 0 #7a130c}
+#ooBtn:active{transform:translateY(3px);box-shadow:0 1px 0 #7a130c}
+#ooBtn:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+#shopNameIn{width:100%;min-height:48px;font:inherit;font-size:17px;padding:0 14px;border-radius:12px;border:1.5px solid var(--line);background:var(--panel2);color:var(--ink);-webkit-user-select:text;user-select:text;margin-top:4px}
+#shopNameIn:focus{outline:3px solid var(--gold);outline-offset:1px}
+#story{position:absolute;left:8px;right:8px;bottom:8px;z-index:9;display:none;gap:10px;align-items:flex-start;padding:12px 12px 22px;border-radius:14px;
+  background:rgba(18,20,30,.94);color:#f4f1e8;border:2px solid #c8a04a;box-shadow:0 6px 20px rgba(0,0,0,.45);cursor:pointer;min-height:96px}
+#story.show{display:flex}
+#stFace{width:56px;height:56px;flex:none;image-rendering:pixelated;border-radius:6px;border:2px solid #c8a04a;background:#ddd}
+.st-body{flex:1;min-width:0}
+#stName{font-family:"DotGothic16",sans-serif;font-size:13px;color:#ffd35a;margin-bottom:4px}
+#stText{font-family:"DotGothic16","Zen Kaku Gothic New",sans-serif;font-size:15px;line-height:1.6}
+#stText.narr{font-style:normal;color:#dfe3ea}
+#stSkip{position:absolute;top:-14px;right:8px;border:1.5px solid #c8a04a;background:#23272f;color:#f4f1e8;border-radius:999px;font:inherit;font-size:12px;padding:4px 12px;min-height:30px;cursor:pointer}
+#stNext{position:absolute;right:12px;bottom:4px;font-size:12px;color:#ffd35a;animation:stBlink 1s infinite}
+@keyframes stBlink{50%{opacity:.2}}
+.row.two{grid-template-columns:1fr auto auto}
+.alt{border:1.5px solid var(--accent);border-radius:10px;min-height:44px;min-width:64px;padding:6px 10px;font:inherit;font-weight:700;font-size:13px;background:transparent;color:var(--accent);cursor:pointer}
+.alt.set{background:var(--gold);border-color:var(--gold);color:#1b1206}
+.hearts{color:#e0506a;font-size:12px;letter-spacing:1px}
+.visits{font-size:12.5px;color:var(--sub);text-align:right;white-space:nowrap}
+#day{position:absolute;inset:0;display:none;align-items:center;justify-content:center;z-index:7;background:rgba(5,8,20,.72);color:#fff;text-align:center}
+#day.show{display:flex}
+#day h3{font-family:"Dela Gothic One",sans-serif;font-weight:400;font-size:26px;margin:0 0 12px}
+#day p{margin:4px 0;font-size:15px}
+#day b{font-family:"Dela Gothic One",sans-serif;font-weight:400;color:#ffd35a}
+nav button{font-size:12.5px}
+.row:last-child{border-bottom:0}
+.nm{font-weight:700;font-size:15px}
+.nm small{font-weight:500;color:var(--sub);margin-left:6px;font-size:12px}
+.ds{font-size:12.5px;color:var(--sub);margin-top:2px}
+.buy{border:0;border-radius:10px;min-width:92px;min-height:44px;padding:6px 12px;font:inherit;font-weight:700;font-size:14px;
+  background:var(--accent);color:var(--accent-ink);cursor:pointer}
+.buy:disabled{background:var(--disabled);color:var(--panel);cursor:default}
+.buy:focus-visible,#rushBtn:focus-visible,nav button:focus-visible,.mbtn:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.stat{display:flex;justify-content:space-between;padding:9px 2px;border-bottom:1px solid var(--line);font-size:14px}
+.stat b{font-family:"Dela Gothic One",sans-serif;font-weight:400}
+.note{font-size:12.5px;color:var(--sub);padding:10px 2px;line-height:1.6}
+/* 役満 */
+#yk{position:absolute;inset:0;display:none;align-items:center;justify-content:center;pointer-events:none;z-index:5}
+#yk.show{display:flex}
+#yk .box{text-align:center;animation:pop .5s cubic-bezier(.2,1.6,.4,1) both}
+#yk .big{font-family:"Dela Gothic One",sans-serif;font-size:64px;color:#ffd35a;
+  text-shadow:0 0 18px rgba(255,190,40,.9),0 4px 0 #7a1f2e,0 6px 18px rgba(0,0,0,.6);line-height:1}
+#yk .yn{font-family:"Dela Gothic One",sans-serif;font-size:26px;color:#fff;margin-top:8px;text-shadow:0 2px 8px #000}
+#yk .yb{font-weight:700;font-size:18px;color:#ffd35a;margin-top:6px;text-shadow:0 2px 6px #000}
+@keyframes pop{from{transform:scale(.3) rotate(-8deg);opacity:0}to{transform:none;opacity:1}}
+#flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:4}
+#bonus{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);z-index:6;display:none;
+  border:0;border-radius:999px;background:var(--gold);color:#1b1206;font:inherit;font-weight:700;font-size:14px;padding:12px 18px;min-height:44px;cursor:pointer;
+  box-shadow:0 4px 16px rgba(0,0,0,.4)}
+#toast{position:absolute;left:50%;top:10px;transform:translateX(-50%);z-index:6;background:rgba(0,0,0,.75);color:#fff;
+  font-size:13px;padding:8px 14px;border-radius:999px;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}
+/* モーダル */
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:10;padding:20px}
+#modal.show{display:flex}
+.mcard{background:var(--panel);color:var(--ink);border-radius:16px;padding:22px 20px;width:100%;max-width:340px;text-align:center}
+.mcard h2{margin:0 0 6px;font-size:17px}
+.mcard .mv{font-family:"Dela Gothic One",sans-serif;font-size:34px;margin:8px 0 16px;color:var(--gold)}
+.mcard p{margin:0 0 14px;font-size:14px;color:var(--sub);line-height:1.6}
+.mbtn{display:block;width:100%;border:0;border-radius:12px;min-height:48px;font:inherit;font-weight:700;font-size:15px;margin-top:8px;cursor:pointer}
+.mbtn.pri{background:var(--gold);color:#1b1206}
+.mbtn.sec{background:var(--panel2);color:var(--ink)}
+.mbtn:disabled{opacity:.45;cursor:default}
+.count{font-family:"Dela Gothic One",sans-serif;font-size:48px;color:var(--gold);margin:6px 0}
+@media (prefers-reduced-motion: reduce){#yk .box{animation:none}}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="hd-top">
+      <div class="money" id="money">¥0</div>
+      <div class="hd-btns"><button id="rushBtn" type="button">プロを呼ぶ</button><button id="mapOpen" type="button" aria-label="全国マップを開く" title="全国マップ"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 6.5 9 4l6 2.5L21 4v13.5L15 20l-6-2.5L3 20z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 4v13.5M15 6.5V20" stroke="currentColor" stroke-width="2"/></svg></button></div>
+    </div>
+    <div class="hd-sub"><span class="shop" id="shopLine">雀荘 ひだまり</span><span class="rate" id="rate"></span></div>
+  </header>
+  <div id="timebar" aria-label="営業時間の進み具合">
+    <div class="tb-track">
+      <span class="tb-band" style="flex:2;background:#f3e3a0" title="午前(10〜12時)" aria-label="午前"><svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path d="M3 11a5 5 0 0 1 10 0z" fill="#e08a1a"/><path d="M8 2v2.5M3.2 4.8l1.6 1.6M12.8 4.8l-1.6 1.6" stroke="#e08a1a" stroke-width="1.6" stroke-linecap="round"/><path d="M1 12.5h14" stroke="#7a5a1a" stroke-width="1.6" stroke-linecap="round"/></svg></span><span class="tb-band" style="flex:5;background:#ffd062" title="昼(12〜17時)" aria-label="昼"><svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><circle cx="8" cy="8" r="3.4" fill="#e0620f"/><g stroke="#e0620f" stroke-width="1.6" stroke-linecap="round"><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.4 1.4M11.6 11.6L13 13M13 3l-1.4 1.4M4.4 11.6L3 13"/></g></svg></span><span class="tb-band" style="flex:3;background:#ef8f4a" title="夕方(17〜20時)" aria-label="夕方"><svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path d="M3.5 10a4.5 4.5 0 0 1 9 0z" fill="#8a2a14"/><path d="M1 11.5h14M3.5 14h9" stroke="#8a2a14" stroke-width="1.6" stroke-linecap="round"/></svg></span><span class="tb-band night" style="flex:4;background:#3a4677" title="夜(20〜24時)" aria-label="夜"><svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path d="M10.5 2.2A6 6 0 1 0 13.8 11 5 5 0 0 1 10.5 2.2z" fill="#f4ecc8"/><circle cx="12.5" cy="4" r=".8" fill="#f4ecc8"/><circle cx="14" cy="7" r=".6" fill="#f4ecc8"/></svg></span>
+      <i id="tbPast"></i><b id="tbMark"></b>
+    </div>
+    
+  </div>
+  <div id="goal"></div>
+  <div id="stage">
+    <canvas id="cv" aria-label="雀荘の店内"></canvas>
+    <div id="flash"></div>
+    <div id="yk"><div class="box"><div class="big" id="ykBig">役満!</div><div class="yn" id="ykName"></div><div class="yb" id="ykBonus"></div></div></div>
+    <button id="bonus" type="button"></button>
+    <div id="toast"></div>
+    <div id="story" role="dialog" aria-live="polite"><img id="stFace" alt=""><div class="st-body"><div id="stName"></div><div id="stText"></div></div>
+      <button type="button" id="stSkip">スキップ</button><div id="stNext" aria-hidden="true">▼</div></div>
+    <div id="openOv"><div class="oo-card"><div class="oo-ribbon"></div><div class="oo-place" id="ooPlace"></div><div class="oo-name" id="ooName"></div>
+      <p>準備はととのいました。お客さんを迎えましょう</p><button type="button" id="ooBtn">開店する</button></div></div>
+    <div id="day"><div><h3 id="dayT"></h3><p>売上 <b id="dayE"></b></p><p>来店 <b id="dayV"></b></p><p>評判 <b id="dayR"></b></p><button type="button" class="mbtn pri" id="nextDay" style="margin-top:18px">次の日へ</button><p style="margin-top:8px;font-size:13px;opacity:.8" id="dayCount"></p></div></div>
+  </div>
+  <div id="sheet">
+    <button type="button" id="sheetToggle" aria-label="パネルを開閉" aria-expanded="true"><span></span></button>
+    <nav role="tablist">
+      <button role="tab" data-tab="table" aria-selected="true"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 1.5v2.5M12 20v2.5M1.5 12H4M20 12h2.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>卓</span></button>
+      <button role="tab" data-tab="fac" aria-selected="false"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M14.5 4.5a4.5 4.5 0 0 0-5.8 5.8L3.5 15.5a2 2 0 0 0 2.8 2.8l5.2-5.2a4.5 4.5 0 0 0 5.8-5.8l-2.6 2.6-2.4-.4-.4-2.4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span>設備</span></button>
+      <button role="tab" data-tab="deco" aria-selected="false"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M8 21h8l1-6H7z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 15V9M12 11c-3 0-5-2-5-5 3 0 5 2 5 5zM12 9c0-3 2-5 5-5 0 3-2 5-5 5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span>内装</span></button>
+      <button role="tab" data-tab="staff" aria-selected="false"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="7.5" r="3.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4.5 21c.6-4.2 3.6-6.5 7.5-6.5s6.9 2.3 7.5 6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>スタッフ</span></button>
+      <button role="tab" data-tab="reg" aria-selected="false"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 20s-7.5-4.6-7.5-10A4.3 4.3 0 0 1 12 7.4 4.3 4.3 0 0 1 19.5 10c0 5.4-7.5 10-7.5 10z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span>常連</span></button>
+      <button role="tab" data-tab="shop" aria-selected="false"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3.5 9.5 5 4h14l1.5 5.5M4.5 9.5V20h15V9.5M3.5 9.5h17" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M10 20v-5h4v5" fill="none" stroke="currentColor" stroke-width="2"/></svg><span>お店</span></button>
+    </nav>
+    <div id="list"></div>
+  </div>
+</div>
+<div id="modal"><div class="mcard" id="mcard"></div></div>
+<div id="map" role="dialog" aria-label="全国マップ">
+  <div class="map-head"><div><div class="map-title">全国マップ</div><div class="map-sub" id="mapSub"></div></div><button type="button" id="mapClose">閉じる</button></div>
+  <div class="map-body"><svg id="mapSvg" viewBox="22 2 342 364" preserveAspectRatio="xMidYMid meet"></svg></div>
+  <div class="map-panel" id="mapPanel"></div>
+</div>
+
+<script>
+(()=>{
+let W=480;const SPEED=72,OUT=84;
+let H=624,HI=540; // HI=店内の高さ、その下OUT分が店の外(歩道と道路)
+// 通路:縦に2本(卓の列の間)、横断用に奥(CT)と入口側(CY)の2本
+let AISLES=[160,320],CY=505,SW=566,COUNTER_X=212,DOOR=240,AISLE=240;const CROSS_T=118;
+const nearAisle=x=>AISLES.reduce((a,b)=>Math.abs(b-x)<Math.abs(a-x)?b:a);
+const TIERS=[
+  {name:'手積み卓',short:'手積み',dur:20,mult:1,yk:0.02,back:'#e9a23b'},
+  {name:'家庭用麻雀卓',short:'家庭用',dur:13,mult:1.5,yk:0.035,back:'#e9a23b'},
+  {name:'業務用麻雀卓',short:'業務用',dur:8,mult:2.2,yk:0.05,back:'#3a7bd5'}
+];
+const upCost=(i,t)=>Math.round((t===0?3000:40000)*Math.pow(1.35,i));
+// 留守中の営業:店長代行のレベルで上限時間が延びる。効率は25%(広告で2倍)
+const OFFCAP=[2,4,8,12],OFF_EFF=0.25;
+const YAKU=['国士無双','四暗刻','大三元','字一色','緑一色','小四喜','清老頭','九蓮宝燈'];
+const SLOTS=[];
+const ROW_GAP=134; // 卓の縦の間隔
+// 卓数に合わせて店内のつくりを変える(4卓:2×2、6卓:3×2、9卓:3×3)
+function applyLayout(){
+  const n=Math.max(ST().max,(S.tiers||[]).length),cols=n<=4?2:n<=9?3:4,rows=n<=6?2:n<=12?3:4;
+  W=cols===4?640:480;DOOR=AISLE=W/2;
+  const xs=cols===2?[140,340]:cols===3?[80,240,400]:[85,235,405,555];AISLES=cols===2?[240]:cols===3?[160,320]:[160,320,480];COUNTER_X=cols===2?262:cols===3?212:196;
+  // 右奥の厨房・休憩室は店の右端に合わせる
+  KIT.x=W-50;BREAK_SPOTS.length=0;[[82,76],[62,76],[42,76],[82,100],[62,100],[42,100],[22,100]].forEach(([dx,y])=>BREAK_SPOTS.push([W-dx,y]));
+  SLOTS.length=0;for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)SLOTS.push({x:xs[c],y:190+r*ROW_GAP});
+  const lastY=190+(rows-1)*ROW_GAP;HI=lastY+118;CY=lastY+83;H=HI+OUT;SW=HI+26;
+  HALLHOME.x=164+memberCap()*26;
+  planks.length=0;for(let y=0;y<HI;y+=16){let x=-Math.random()*60;const row=[];while(x<W){const w=50+Math.random()*70;row.push({x,w,s:Math.random()});x+=w;}planks.push({y,row});}
+  if(typeof fit==='function'&&cv)fit();
+}
+const OFF=[[0,-44],[44,0],[0,44],[-44,0]];
+const CT={
+  s:{name:'シニア',body:['#8a7a66','#6d7f6a','#9b6b5a','#7a6f8a'],hair:['#d8d8d8','#bdbdbd','#9a9a9a','#eeeeee'],pat:50,stay:.55,dr:0.35,fd:0.08,di:'🍵',fi:'🍙',tier:0,set:.35},
+  w:{name:'会社員',body:['#2b3448','#3a3f4a','#1f2a3a','#4a4f5a'],hair:['#1a1a1a','#2b2118','#3a2a1a'],pat:30,stay:.3,dr:0.5,fd:0.2,di:'🍺',fi:'🍛',tier:3,set:.08},
+  g:{name:'学生',body:['#d9534f','#3c6fb0','#e0a526','#6a8f3a','#b8456f','#2f8f8a'],hair:['#2b2118','#5a3a22','#c9b18a','#1a1a1a'],pat:40,stay:.45,dr:0.35,fd:0.25,di:'🥤',fi:'🍜',tier:1,set:.25}
+};
+// 時間帯ごとの客足と客層(s:シニア w:会社員 g:学生)
+const HOURS={10:[.6,{s:.8,w:.1,g:.1}],11:[.7,{s:.8,w:.1,g:.1}],12:[.9,{s:.55,w:.35,g:.1}],13:[.9,{s:.75,w:.1,g:.15}],14:[.9,{s:.75,w:.05,g:.2}],
+  15:[.8,{s:.6,w:.1,g:.3}],16:[.8,{s:.4,w:.1,g:.5}],17:[.9,{s:.25,w:.4,g:.35}],18:[1.2,{s:.1,w:.6,g:.3}],19:[1.4,{s:.05,w:.65,g:.3}],
+  20:[1.5,{s:0,w:.6,g:.4}],21:[1.5,{s:0,w:.55,g:.45}],22:[1.3,{s:0,w:.5,g:.5}],23:[1.0,{s:0,w:.4,g:.6}]};
+const band=h=>h<12?'午前':h<17?'昼':h<20?'夕方':'夜';
+const MINPS=60/25; // 1時間=25秒
+// 常連は店ごとに別の顔ぶれ
+const REGS=[[
+  {name:'田中さん',type:'s',need:15,like:'昼過ぎの常連。いつもお茶',body:'#6d5a8a',hair:'#eeeeee'},
+  {name:'佐藤さん',type:'w',need:40,like:'仕事帰りに寄って、まずビール',body:'#1f3a5a',hair:'#1a1a1a'},
+  {name:'ミナミさん',type:'g',need:80,like:'ラーメンを食べながら打つ',body:'#e07a2f',hair:'#c9b18a'},
+  {name:'源さん',type:'s',need:150,like:'業務用卓を空けて待っている',body:'#4a6a4a',hair:'#bdbdbd',tierMin:2},
+  {name:'黒川さん',type:'w',need:300,like:'打つのが速い。卓が回る',body:'#2a2a2a',hair:'#3a2a1a'},
+],[
+  {name:'鈴木さん',type:'s',need:15,like:'朝一番に来て夕方まで打つ',body:'#7a6a4a',hair:'#dddddd'},
+  {name:'高橋さん',type:'w',need:40,like:'出張ついでに寄る営業マン',body:'#2a3a4a',hair:'#1a1a1a'},
+  {name:'アカネさん',type:'g',need:80,like:'大学の麻雀サークルの代表',body:'#c04a6a',hair:'#5a3a22'},
+  {name:'岩田さん',type:'s',need:150,like:'業務用卓にこだわる元店主',body:'#3a5a6a',hair:'#bdbdbd',tierMin:2},
+  {name:'中村さん',type:'w',need:300,like:'終電まで粘る',body:'#3a3a3a',hair:'#2b2118'}
+],[
+  {name:'山口さん',type:'s',need:15,like:'屋台帰りにふらっと寄る',body:'#6a5a3a',hair:'#eeeeee'},
+  {name:'松尾さん',type:'w',need:40,like:'中洲で働くバーテンダー',body:'#1a1a2a',hair:'#1a1a1a'},
+  {name:'ユウトさん',type:'g',need:80,like:'専門学校生。とんこつラーメン派',body:'#2f8f5a',hair:'#c9b18a'},
+  {name:'大庭さん',type:'s',need:150,like:'大会常連の古豪',body:'#5a4a6a',hair:'#bdbdbd',tierMin:2},
+  {name:'古賀さん',type:'w',need:300,like:'福岡支社の課長',body:'#2a3a5a',hair:'#3a2a1a'}
+],[
+  {name:'西田さん',type:'s',need:15,like:'野球中継を見ながら待つ',body:'#8a4a3a',hair:'#dddddd'},
+  {name:'岡本さん',type:'w',need:40,like:'梅田の証券マン',body:'#1f2a3a',hair:'#1a1a1a'},
+  {name:'コハルさん',type:'g',need:80,like:'お笑い芸人の卵',body:'#e0a526',hair:'#5a3a22'},
+  {name:'北浜さん',type:'s',need:150,like:'業務用卓しか認めない',body:'#4a4a6a',hair:'#bdbdbd',tierMin:2},
+  {name:'堂島さん',type:'w',need:300,like:'打つのが速い',body:'#2a2a2a',hair:'#2b2118'}
+],[
+  {name:'渡辺さん',type:'s',need:15,like:'新宿で40年打っている',body:'#6a6a5a',hair:'#eeeeee'},
+  {name:'小林さん',type:'w',need:40,like:'IT企業の役員',body:'#1a2a3a',hair:'#1a1a1a'},
+  {name:'レイナさん',type:'g',need:80,like:'麻雀の配信者',body:'#8a5aa8',hair:'#e8d0a0'},
+  {name:'神楽坂さん',type:'s',need:150,like:'元プロの雀士',body:'#2a4a3a',hair:'#bdbdbd',tierMin:2},
+  {name:'早川さん',type:'w',need:300,like:'毎晩終電を逃す',body:'#3a2a2a',hair:'#3a2a1a'}
+]];
+let REG=REGS[0];
+const hearts=v=>Math.min(5,Math.floor(v/5));
+const WS=[{x:40,y:78},{x:66,y:78},{x:104,y:78},{x:130,y:78}],WCORR=58;
+// カウンター裏(ドリンクを作る場所)の通路の高さ
+const HOMEY=20;
+const KIT={x:430,y:24,corr:HOMEY},HALLHOME={x:296,y:HOMEY};
+// 休憩室(厨房の下)。休むときに座る場所
+const BREAK_CORR=90,BREAK_SPOTS=[[398,76],[418,76],[438,76],[398,100],[418,100],[438,100],[458,100]];
+// ステージ(出店先)。地方から始まり、最後は東京
+const STAGES=[
+  // fee=場代・単価の倍率、cost=設備などの物価倍率、open=出店費用
+  {no:1,floorType:'wood',pos:[133.6,33.7],area:'地方の町',place:'商店街の2階',max:4,fee:1,cost:1,open:0,traffic:.8,goal:{earn:50000,rep:3.5},floor:[30,38,34]},
+  {no:2,floorType:'carpet',pos:[140.9,38.3],area:'地方都市',place:'駅前の雑居ビル',max:6,fee:4,cost:20,open:1000000,traffic:1.1,goal:{earn:12000000,rep:3.8},floor:[24,30,40]},
+  {no:3,floorType:'checker',pos:[130.4,33.6],area:'福岡',place:'天神の繁華街',max:9,fee:16,cost:150,open:20000000,traffic:1.5,goal:{earn:750000000,rep:4.1},floor:[18,45,28]},
+  {no:4,floorType:'redcarpet',pos:[135.5,34.7],area:'大阪',place:'梅田の大型ビル',max:12,fee:64,cost:1000,open:350000000,traffic:2.1,goal:{earn:5600000000,rep:4.3},floor:[350,28,26]},
+  {no:5,floorType:'marble',pos:[139.7,35.7],area:'東京',place:'新宿の旗艦店',max:16,fee:256,cost:6000,open:2000000000,traffic:2.9,goal:{earn:78000000000,rep:4.5},floor:[220,12,22]}
+];
+const ST=()=>STAGES[Math.min(S.stage||0,STAGES.length-1)];
+// 店の広さに合わせたメンバーの上限(4卓:3人、6卓:4人、9卓:6人)
+const memberCap=()=>({4:3,6:4,9:6,12:7,16:9})[ST().max]||3;
+const CM=()=>ST().cost; // 物価は場代より速く上がる(前の店の資金や収入で買いすぎないように)
+const BG_SHARE=0.1;
+const pr=v=>Math.round(v*CM());
+const bgIncome=()=>(S.shops||[]).reduce((a,sh,i)=>i===S.active?a:a+(sh.bestRate||0)*BG_SHARE,0);
+const storeRate=()=>Math.max(S.bestRate||0,S.rate||0);
+const goalMet=()=>S.storeEarn>=ST().goal.earn&&S.rep>=ST().goal.rep;
+// 内装はそれぞれ3段階。段階ごとに来店ペース +b
+const DECO={
+  plant:{name:'観葉植物',grades:['小さな鉢植え','鉢植えを2つ','大きな鉢植えを3つ'],b:.08,c:120,g:4.5},
+  clock:{name:'時計',grades:['壁掛け時計','振り子時計','電光時計'],b:.06,c:200,g:4.5},
+  speaker:{name:'BGMスピーカー',grades:['小型スピーカー','ステレオスピーカー','店内4か所のスピーカー'],b:.08,c:350,g:4.5},
+  light:{name:'照明',grades:['間接照明','卓ごとのペンダントライト','シャンデリア'],b:.12,c:600,g:4.5},
+  purifier:{name:'空気清浄機',grades:['家庭用','業務用','2台体制'],b:.10,c:900,g:4.5},
+  art:{name:'絵画',grades:['小さな絵','金の額縁の絵画','絵画を2枚'],b:.08,c:1500,g:4.5},
+  neon:{name:'看板',grades:['ネオン看板','大きなネオン看板','色が変わる電光看板'],b:.15,c:2500,g:4.5}
+};
+Object.values(DECO).forEach(d=>d.max=d.grades.length);
+const DEF={story:null,boss:null,started:0,active:0,shops:null,stage:0,storeEarn:0,chain:0,stores:[],cleared:0,members:null,hallStaff:null,cands:{},broom:0,maint:0,repairs:0,cleans:0,money:200,tiers:[0,0],modes:['free','free'],clock:600,day:1,closing:0,rep:3,visits:0,regs:[0,0,0,0,0],dayEarn:0,dayVisits:0,fee:0,drink:0,food:0,hall:0,staff:1,wait:1,tv:0,manga:0,mag:0,
+  deco:{plant:0,clock:0,speaker:0,light:0,purifier:0,art:0,neon:0},
+  total:0,games:0,yaku:0,lost:0,served:0,proUntil:0,rate:0,last:Date.now()};
+const KEY='jansou-proto-v3';
+function fresh(){return clampS(JSON.parse(JSON.stringify(Object.assign({},DEF,{last:Date.now()}))));}
+function pick(a){return a[Math.random()*a.length|0];}
+const NAMES=['ユウキ','ハルカ','ソウタ','ミオ','ダイチ','アヤ','レン','サキ','タクミ','ナナ','コウ','リナ','シュン','マイ','ケンジ','ユイ','カイト','モモ','リク','チヒロ'];
+const STATS=[['spd','移動'],['cook','調理'],['charm','愛嬌'],['mj','麻雀'],['sta','体力']];
+function genStaff(extra){const used=new Set([...(S&&S.members||[]),...(S&&S.hallStaff?[S.hallStaff]:[])].map(m=>m.name).concat(extra||[]));
+  const pool=NAMES.filter(n=>!used.has(n));const st={name:pick(pool.length?pool:NAMES)};
+  STATS.forEach(([k])=>st[k]=1);let pts=5+Math.floor(Math.random()*5);
+  while(pts>0){const k=pick(STATS)[0];if(st[k]<5){st[k]++;pts--;}}addCap(st);return st;}
+// 各ステータスの伸びしろ(上限)は、今の値から5の間でランダム
+function addCap(st){st.cap={};STATS.forEach(([k])=>{st.cap[k]=Math.min(5,st[k]+Math.floor(Math.random()*(5-st[k]+1)));});return st;}
+const capOf=(m,k)=>m.cap?m.cap[k]:5;
+// 採用費:今のステータスと伸びしろ(上限)が高いほど高い。ホールスタッフは麻雀を打たないので麻雀は計算に入れない
+function hireCost(c,role){let cur=0,room=0;STATS.forEach(([k])=>{if(role==='hall'&&k==='mj')return;cur+=c[k];room+=capOf(c,k)-c[k];});
+  const base=role==='hall'?4:5;return Math.round(60*Math.pow(1.3,cur-base)*Math.pow(1.12,room)*CM()/10)*10;}
+function clampS(d){if(!d.story){d.story={};if(d.started){['prologue','ch0_intro','ch0_open'].forEach(k=>d.story[k]=1);const n=(d.shops||[]).length||1;
+    for(let i=0;i<n;i++)d.story[`ch${i}_intro`]=1;for(let i=0;i<n-1;i++)d.story[`ch${i}_end`]=1;if((d.shops||[]).length>1)d.story.pro_meet=1;}}if(d.opened==null){d.opened=1;(d.shops||[]).forEach(sh=>{if(sh.opened==null)sh.opened=1;});}if(!d.boss)d.boss={name:'店長',spd:3,cook:2,charm:3,mj:3,sta:5,cap:{spd:5,cook:5,charm:5,mj:5,sta:5}};if(d.started==null)d.started=(d.total||0)>0?1:0;d.wait=1;(d.shops||[]).forEach(sh=>sh.wait=1);d.staff=Math.min(6,d.staff||1);
+  if(!d.members){d.members=[];for(let i=0;i<d.staff;i++)d.members.push(genStaffRaw(d));}
+  d.members=d.members.slice(0,6);d.staff=d.members.length;
+  if(d.hall&&!d.hallStaff)d.hallStaff=genStaffRaw(d);
+  d.members.concat(d.hallStaff?[d.hallStaff]:[]).forEach(m=>{if(!m.cap)addCap(m);if(m.sta==null){m.sta=1+Math.floor(Math.random()*3);m.cap.sta=Math.min(5,m.sta+Math.floor(Math.random()*(6-m.sta)));}});
+  (d.shops||[]).forEach(sh=>(sh.members||[]).concat(sh.hallStaff?[sh.hallStaff]:[]).forEach(m=>{if(m.sta==null){m.sta=1+Math.floor(Math.random()*3);m.cap=m.cap||{};m.cap.sta=Math.min(5,m.sta+Math.floor(Math.random()*(6-m.sta)));}}));migrateShops(d);return d;}
+const SHOP_KEYS=['opened','shopName','mgr','stage','tiers','modes','tb','fee','drink','food','hall','hallStaff','members','staff','wait','tv','manga','mag','broom','maint','deco','rep','storeEarn','bestRate','rate','regs','visits','cands','cleared'];
+function freshShop(stage,d){return{opened:0,shopName:'',stage,tiers:[0,0],modes:['free','free'],tb:[],fee:0,drink:0,food:0,hall:0,hallStaff:null,members:[genStaffRaw(d)],staff:1,
+  mgr:0,wait:1,tv:0,manga:0,mag:0,broom:0,maint:0,deco:{plant:0,clock:0,speaker:0,light:0,purifier:0,art:0,neon:0},rep:3,storeEarn:0,bestRate:0,rate:0,regs:[0,0,0,0,0],visits:0,cands:{},cleared:0};}
+function snapShop(d){const o={};SHOP_KEYS.forEach(k=>o[k]=d[k]);return JSON.parse(JSON.stringify(o));}
+function migrateShops(d){if(d.shops)return;const cur=d.stage||0;d.shops=[];
+  for(let i=0;i<cur;i++){const sh=freshShop(i,d);sh.bestRate=((d.stores||[])[i]||{}).rate||0;sh.cleared=1;d.shops.push(sh);}
+  d.cleared=(d.cleared>cur)?1:0;d.shops.push(snapShop(d));d.active=cur;d.chain=0;}
+function genCands(){const out=[];for(let i=0;i<3;i++)out.push(genStaff(out.map(c=>c.name)));return out;}
+function genStaffRaw(d){const keep=S;S=d;const r=genStaff();S=keep;return r;}
+function load(){try{const s=localStorage.getItem(KEY)||localStorage.getItem('jansou-proto-v2');if(s){const o=JSON.parse(s);const d=fresh();Object.assign(d,o);if(!o.members){d.members=null;if(!o.hallStaff)d.hallStaff=null;}d.deco=Object.assign({},DEF.deco,o.deco||{});while(d.modes.length<d.tiers.length)d.modes.push('free');if(o.storeEarn==null)d.storeEarn=d.total||0;return clampS(d);}}catch(e){}return fresh();}
+function save(){S.last=Date.now();if(tables.length)S.tb=tables.map(t=>({d:+t.dirt.toFixed(2),b:t.broken?1:0,m:t.manual?1:0}));if(S.shops)S.shops[S.active]=snapShop(S);try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+let S;S=load();if(!S.cands)S.cands={};REG=REGS[S.stage||0];
+
+const tierOf=tb=>tb.manual?0:S.tiers[tb.slot];
+const feePer=tb=>Math.round(40*(1+0.25*S.fee)*TIERS[tierOf(tb)].mult*ST().fee);
+const drinkPrice=()=>Math.round(50*(1+0.35*(S.drink-1))*ST().fee);
+const foodPrice=()=>Math.round(140*(1+0.35*(S.food-1))*ST().fee);
+const proOn=()=>Date.now()<S.proUntil;
+const DECO_SCALE=0.35; // 内装の来店効果の強さ(全部最高で約+70%)
+const decoBonus=()=>Object.keys(DECO).reduce((a,k)=>a+S.deco[k]*DECO[k].b,0)*DECO_SCALE;
+const repMult=()=>0.5+0.2*S.rep;
+const hourNow=()=>Math.min(23,Math.floor(S.clock/60));
+const BASE_INTERVAL=6.5; // 来店間隔の基準(秒)
+const interval=()=>BASE_INTERVAL/(Date.now()<(S.boostUntil||0)?2:1)/(1+decoBonus())/(proOn()?2:1)/HOURS[hourNow()][0]/repMult()/ST().traffic;
+const setRate=tb=>Math.round(500*(1+0.25*S.fee)*(1+0.3*tierOf(tb))*ST().fee);
+function addRep(d){S.rep=Math.max(1,Math.min(5,S.rep+d));}
+function pickType(mix){let r=Math.random(),a=0;for(const k of['s','w','g']){a+=mix[k];if(r<a)return k;}return 'g';}
+
+const patience=()=>25+(S.mag?10:0)+(S.manga?20:0)+(S.tv?20:0);
+function fmt(n){n=Math.floor(n);if(n>=1e8)return(n/1e8).toFixed(2)+'億';if(n>=1e5)return(n/1e4).toFixed(n>=1e6?0:1)+'万';return n.toLocaleString('ja-JP');}
+const rnd=(a,b)=>a+Math.random()*(b-a);
+
+// ---------- runtime ----------
+let chainAcc=0,gt=0,ents=[],tables=[],floats=[],parts=[],orders=[],nid=1,spawnT=1,shake=0,incomeLog=[],playTime=0,noteT=0;
+let waitSeats=[null,null,null,null];
+function addTable(){tables.push({side:[[],[],[],[]],busy:[null,null,null,null],dirt:0,broken:false,manual:false,repairing:false,cleaner:null,setUntil:0,setStart:0,slot:tables.length,seats:[null,null,null,null],state:'open',t:0,waitSince:0,tap:0,pend:[]});}
+// 待機位置はカウンター裏の通路に横一列(待合室と厨房の間)
+function home(i){return{x:164+i*26,y:HOMEY};}
+function mkStaff(i){const h=home(i);ents.push({id:nid++,type:'staff',idx:i,st:S.members[i],x:h.x,y:h.y,corr:HOMEY,path:[],moving:false,state:'idle',dir:Math.PI/2,body:'#f3f3f3',hair:'#1c1c1c'});}
+function mkHall(){ents.push({id:nid++,type:'hall',st:S.hallStaff,x:HALLHOME.x,y:HALLHOME.y,corr:HOMEY,path:[],moving:false,state:'idle',dir:Math.PI/2,body:'#f3f3f3',hair:'#3a2a1a',job:null,timer:0});}
+// 店長=プレイヤー自身。手が空いていればスタッフと同じ仕事を自動でこなし、タップで指示した仕事を優先する。スタミナはない
+const bossHome=()=>({x:COUNTER_X+49,y:72});
+function mkBoss(){const h=bossHome();ents.push({id:nid++,type:'boss',st:S.boss,x:h.x,y:h.y,corr:72,path:[],moving:false,state:'idle',dir:Math.PI/2,body:'#232838',hair:'#1a1a1a',job:null,timer:0});}
+// 店長の表示名(名前+店長)。名前が未設定なら「店長」
+const esc=t=>String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+const bossLabel=()=>{const n=(S.boss.name||'').trim();return !n||n==='店長'?'店長':n.endsWith('店長')?n:n+'店長';};
+function askBossName(onDone,first){
+  mcard.innerHTML=`<h2>${first?'あなたの名前を教えてください':'店長の名前を変える'}</h2><p>店長の名札に「○○店長」と表示されます。${first?'あとからスタッフタブで変えられます。':''}</p>
+    <input id="bossName" type="text" maxlength="8" autocomplete="off" placeholder="例:ホンダ" aria-label="店長の名前" value="${esc(S.boss.name&&S.boss.name!=='店長'?S.boss.name:'')}">
+    <p class="nm-hint">8文字まで</p><button class="mbtn pri" id="bnOk" type="button">決定</button>${first?'':'<button class="mbtn sec" id="bnX" type="button">やめる</button>'}`;
+  modal.classList.add('show');const inp=document.getElementById('bossName');setTimeout(()=>inp.focus(),50);
+  const ok=()=>{const v=inp.value.replace(/\s+/g,' ').trim().slice(0,8);S.boss.name=v||'店長';save();modal.classList.remove('show');renderTab();onDone&&onDone();};
+  document.getElementById('bnOk').onclick=ok;inp.onkeydown=ev=>{if(ev.key==='Enter'){ev.preventDefault();ok();}};
+  const x=document.getElementById('bnX');if(x)x.onclick=()=>modal.classList.remove('show');}
+// 店の名前
+const defaultShopName=()=>S.stage===0?'雀荘 ひだまり':`ひだまり ${ST().area}店`;
+const shopName=()=>(S.shopName||'').trim()||defaultShopName();
+function askShopName(onDone){const g=ST();
+  mcard.innerHTML=`<h2>${g.no}号店の名前を決めてください</h2><p>${g.area}の${g.place}に出す店です。看板と画面上部に表示されます。</p>
+    <input id="shopNameIn" type="text" maxlength="10" autocomplete="off" placeholder="${esc(defaultShopName())}" aria-label="店の名前" value="${esc(S.shopName||'')}">
+    <p class="nm-hint">10文字まで。空欄なら「${esc(defaultShopName())}」になります</p><button class="mbtn pri" id="snOk" type="button">決定</button>`;
+  modal.classList.add('show');const inp=document.getElementById('shopNameIn');setTimeout(()=>inp.focus(),50);
+  const ok=()=>{S.shopName=inp.value.replace(/\s+/g,' ').trim().slice(0,10)||defaultShopName();save();modal.classList.remove('show');onDone&&onDone();};
+  document.getElementById('snOk').onclick=ok;inp.onkeydown=ev=>{if(ev.key==='Enter'){ev.preventDefault();ok();}};}
+// 開店式:「開店する」ボタンを押すまで店は開かない
+function showOpenOverlay(){const ov=document.getElementById('openOv');
+  document.getElementById('ooName').textContent=shopName();document.getElementById('ooPlace').textContent=`${ST().no}号店 ${ST().area}(${ST().place})`;
+  ov.classList.add('show');}
+function prepareOpening(){const go=()=>playScene(`ch${S.stage}_intro`,showOpenOverlay);if(!S.shopName)askShopName(go);else go();}
+function grandOpen(){document.getElementById('openOv').classList.remove('show');S.opened=1;S.boostUntil=Date.now()+90000;spawnT=0;save();
+  const yk=document.getElementById('yk');document.getElementById('ykBig').textContent='開店!';document.getElementById('ykName').textContent=shopName();
+  document.getElementById('ykBonus').textContent='開店記念 90秒間 客足2倍';yk.classList.remove('show');void yk.offsetWidth;yk.classList.add('show');setTimeout(()=>yk.classList.remove('show'),2600);
+  const fl=document.getElementById('flash');fl.style.transition='none';fl.style.opacity=.6;requestAnimationFrame(()=>{fl.style.transition='opacity .6s';fl.style.opacity=0;});
+  const cols=['#ffd35a','#ff6b6b','#7fd1ff','#8dff9a','#ffffff','#ff9ad5'];
+  for(let i=0;i<6;i++)burst(DOOR+(i-2.5)*50,HI-20,30,cols);burst(W/2,HI/2,60,cols);shake=.3;
+  document.getElementById('goal')._k=null;
+  if(S.stage===0&&!(S.story||{}).ch0_open){spawnTanaka();playScene('ch0_open');}}
+// 1号店の開店直後、最初のお客さんとして田中さんが来る
+function spawnTanaka(){const e=mkCust('s',0);e.bubble='どうも';e.bubbleT=3;const tb=openTable(e);if(tb){ents.push(e);sendToSeat(e,tb,freeIdx(tb));}}
+const isCrew=e=>e&&(e.type==='staff'||e.type==='boss');
+function mkPro(){const e={id:nid++,type:'pro',outside:1,x:-16,y:SW,corr:CY,path:[],moving:false,state:'toStand',dir:-Math.PI/2,body:'#1f2a4a',hair:'#111'};ents.push(e);route(e,AISLES[0],Math.min(364,CY-24),Math.min(364,CY-24));}
+function initWorld(){ents=[];tables=[];orders=[];waitSeats=[null,null,null,null];
+  for(let i=0;i<S.tiers.length;i++){addTable();const st=(S.tb||[])[i];if(st){tables[i].dirt=st.d||0;tables[i].broken=!!st.b;tables[i].manual=!!st.m;}}
+  for(let i=0;i<S.members.length;i++)mkStaff(i);if(S.hall)mkHall();mkBoss();if(proOn())mkPro();}
+const byId=id=>ents.find(e=>e.id===id);
+const occ=tb=>tb.seats.filter(Boolean).length;
+
+function route(e,tx,ty,tcorr){let p;
+  if(e.outside){e.outside=false;p=[{x:DOOR,y:SW},{x:DOOR,y:CY}];e.corr=CY;e._fromDoor=1;}
+  const a1=nearAisle(e._fromDoor?DOOR:e.x),a2=nearAisle(tx);e._fromDoor=0;
+  p=(p||[{x:e.x,y:e.corr}]).concat([{x:a1,y:e.corr}]);
+  if(a1!==a2){const c=Math.abs(e.corr-CROSS_T)+Math.abs(tcorr-CROSS_T)<=Math.abs(e.corr-CY)+Math.abs(tcorr-CY)?CROSS_T:CY;p.push({x:a1,y:c},{x:a2,y:c});}
+  p.push({x:a2,y:tcorr},{x:tx,y:tcorr},{x:tx,y:ty});e.path=p;e.corr=tcorr;e.moving=true;}
+function seatPos(tb,k){const s=SLOTS[tb.slot];return{x:s.x+OFF[k][0],y:s.y+OFF[k][1],corr:k===2?s.y+50:s.y-50};}
+function freeSeat(e){if(e.table){e.table.seats[e.seat]=null;e.table=null;}if(e.wseat!=null){waitSeats[e.wseat]=null;e.wseat=null;}}
+function sendToSeat(e,tb,k){freeSeat(e);tb.seats[k]=e.id;e.table=tb;e.seat=k;e.state='toSeat';const p=seatPos(tb,k);route(e,p.x,p.y,p.corr);
+  if(occ(tb)===1)tb.waitSince=gt;}
+function sendToWait(e,w){waitSeats[w]=e.id;e.wseat=w;e.state='toWait';e.waitOrder=gt;route(e,WS[w].x,WS[w].y,WCORR);}
+function leave(e,bubble){freeSeat(e);e.orders=[];e.state='leaving';if(bubble){e.bubble=bubble;e.bubbleT=2.5;}route(e,DOOR,SW,CY);e.path.push({x:Math.random()<.5?-20:W+20,y:SW+rnd(-6,6)});}
+function goRest(e){playScene('first_rest');freeSeat(e);e.job=null;const used=ents.filter(x=>x.restSpot!=null).map(x=>x.restSpot);
+  let k=BREAK_SPOTS.findIndex((_,i)=>!used.includes(i));if(k<0)k=0;e.restSpot=k;e.state='toRest';const [x,y]=BREAK_SPOTS[k];route(e,x,y,BREAK_CORR);}
+function goHome(e){if(e.type==='boss'){freeSeat(e);e.job=null;e.state='returning';const h=bossHome();route(e,h.x,h.y,h.y);return;}if(tired(e)){goRest(e);return;}freeSeat(e);e.state='returning';const h=home(e.idx);route(e,h.x,h.y,HOMEY);}
+function serverHome(e){e.job=null;if(e.type==='staff'||e.type==='boss'||tired(e)){goHome(e);return;}e.state='returning';route(e,HALLHOME.x,HALLHOME.y,HOMEY);}
+
+// サイドテーブルに器が残っている席には案内しない(片づけてから)
+const seatFree=(t,k)=>t.seats[k]===null&&!t.side[k].length;
+const freeIdx=t=>[0,1,2,3].find(k=>seatFree(t,k))??-1;
+// 客から見て左側のサイドテーブルの位置
+function sidePos(tb,k){const s=SLOTS[tb.slot],sx=s.x+OFF[k][0],sy=s.y+OFF[k][1],L=Math.hypot(s.x-sx,s.y-sy),fx=(s.x-sx)/L,fy=(s.y-sy)/L;return{x:sx+fy*SIDE_GAP,y:sy-fx*SIDE_GAP};}
+const SIDE_GAP=29; // 客とサイドテーブルの間隔
+function openTable(e){let o=tables.filter(t=>!t.broken&&S.modes[t.slot]==='free'&&t.state==='open'&&freeIdx(t)>=0);
+  const pref=e&&e.ctype?CT[e.ctype].tier:1;
+  if(e&&e.reg!=null&&REG[e.reg].tierMin){const hi=o.filter(t=>tierOf(t)>=REG[e.reg].tierMin);if(hi.length)o=hi;}
+  const sc=t=>occ(t)*10+tierOf(t)*pref-(t.dirt>.5?12:0);o.sort((a,b)=>sc(b)-sc(a));return o[0]||null;}
+function mkCust(type,reg){const T=CT[type],R=reg!=null?REG[reg]:null;
+  const side=Math.random()<.5;const e={id:nid++,type:'cust',outside:1,ctype:type,reg,x:side?-16:W+16,y:SW+rnd(-5,5),corr:CY,path:[],moving:false,state:'new',dir:-Math.PI/2,
+    body:R?R.body:pick(T.body),hair:R?R.hair:pick(T.hair),sitSince:0,wseat:null};
+  if(R){e.bubble='どうも';e.bubbleT=2.5;}
+  return e;}
+const STLABEL={spd:'移動',cook:'調理',charm:'愛嬌',mj:'麻雀',sta:'体力'};
+const xpNeed=lv=>12*lv*lv;
+function gainXp(e,k,n){const st=e&&e.st;if(!st||st[k]>=capOf(st,k))return;st.xp=st.xp||{};st.xp[k]=(st.xp[k]||0)+n;
+  if(st.xp[k]>=xpNeed(st[k])){st.xp[k]-=xpNeed(st[k]);st[k]++;if(st[k]>=capOf(st,k))st.xp[k]=0;
+    floats.push({x:e.x,y:e.y-18,text:STLABEL[k]+'UP!',t:0,c:'#7fffb0',small:1});burst(e.x,e.y,12,['#7fffb0','#ffffff']);
+    toast(`${st.name}さんの${STLABEL[k]}が${st[k]}に上がりました`);}}
+const trainCost=(st,k)=>pr(800*Math.pow(2.4,st[k]-1));
+const STAFF_SPEED=1.5; // スタッフ(メンバー・ホール)の移動速度の倍率
+// スタミナ:仕事をするたびに減り、0になったら休憩室で休む(体力のステータスが高いほど多い)
+const stamMax=st=>8+4*(st.sta||1);
+function useStam(e,n){const st=e&&e.st;if(!st||e.type==='boss')return;if(st.stam==null)st.stam=stamMax(st);st.stam=Math.max(0,st.stam-n);}
+const tired=e=>e.st&&e.st.stam!=null&&e.st.stam<=0;
+const spdMul=e=>e.st?(0.7+0.12*e.st.spd)*STAFF_SPEED:1;
+const cookMul=e=>e.st?1.3-0.12*e.st.cook:1;
+const custPat=e=>CT[e.ctype].pat+(e.reg!=null?hearts(S.regs[e.reg])*10:0);
+function spawn(){
+  const type=pickType(HOURS[hourNow()][1]);
+  if(Math.random()<CT[type].set&&S.modes.includes('set')){
+    const tb=tables.find(t=>!t.broken&&S.modes[t.slot]==='set'&&t.state==='open'&&occ(t)===0&&t.side.every(x=>!x.length));
+    if(tb){for(let i=0;i<4;i++){const e=mkCust(type,null);e.x=-16-i*16;e.y=SW;e.set=true;ents.push(e);sendToSeat(e,tb,i);}
+      tb.setStart=S.clock;tb.setUntil=S.clock+rnd(120,240);S.visits+=4;S.dayVisits+=4;
+      floats.push({x:AISLE,y:HI-30,text:'セット4名様',t:0,c:'#ffd35a',small:1});return;}
+    S.lost+=4;addRep(-.005);floats.push({x:AISLE,y:HI-30,text:'セット卓が埋まっています',t:0,c:'#ffffff',small:1});return;
+  }
+  let reg=null;const cand=[];REG.forEach((r,i)=>{if(r.type===type&&S.visits>=r.need&&!ents.some(e=>e.reg===i))cand.push(i);});
+  if(cand.length&&Math.random()<.22)reg=pick(cand);
+  const e=mkCust(type,reg);
+  const tb=openTable(e);
+  const prev=S.visits;
+  const ok=()=>{S.visits++;S.dayVisits++;REG.forEach(r=>{if(prev<r.need&&S.visits>=r.need)toast('新しい常連 '+r.name+'が来るようになりました');});};
+  if(tb){ents.push(e);sendToSeat(e,tb,freeIdx(tb));ok();return;}
+  if(S.wait){const w=waitSeats.indexOf(null);if(w>=0){ents.push(e);sendToWait(e,w);ok();return;}}
+  S.lost++;addRep(-.005);floats.push({x:AISLE,y:HI-30,text:S.wait?'待合室も満席…':'満席…',t:0,c:'#ffffff'});
+}
+function arrive(e){
+  if(e.state==='toSeat'){e.state='seated';e.sitSince=gt;const s=SLOTS[e.table.slot];e.dir=Math.atan2(s.y-e.y,s.x-e.x);if(e.type==='cust'){const first=e.plan==null;if(first){e.games=0;e.plan=planGames(e.ctype);}
+      // 通い慣れた常連は、席に着くと「いつもの!」で必ず注文する
+      if(first&&e.reg!=null&&S.regs[e.reg]>=3&&(S.drink||S.food)){e.bubble='いつもの!';e.bubbleT=2.5;placeOrder(e,S.drink?'drink':'food');rollOrders(e,.5);}
+      else rollOrders(e,1);}}
+  else if(e.state==='toWait'){e.state='waiting';e.sitSince=gt;e.dir=-Math.PI/2;}
+  else if(e.state==='toStand'){e.state='standby';e.dir=0;}
+  else if(e.state==='leaving'){ents=ents.filter(x=>x!==e);}
+  else if(e.state==='returning'){e.state='idle';e.dir=Math.PI/2;e.carry=null;}
+  else if(e.state==='toClean'){if(e.cleanTb.state==='play'){e.cleanTb.cleaner=null;goHome(e);}else{e.state='cleaning';e.timer=S.broom?1.5:3;e.dir=Math.PI/2;}}
+  else if(e.state==='toRepair'){e.state='repairing';e.timer=12;e.dir=Math.PI/2;}
+  else if(e.state==='toRest'){e.state='resting';e.dir=-Math.PI/2;}
+  else if(e.state==='toBus'){e.state='busing';const tb=e.bus.tb,n=[0,1,2,3].filter(k=>tb.seats[k]===null&&tb.side[k].length).length;e.timer=.6+.3*n;}
+  else if(e.state==='toKitchen'){e.state='cook';e.timer=2.2*cookMul(e);e.dir=Math.PI/2;}
+  else if(e.state==='deliver'){const c=byId(e.job.id);
+    if(canServe(c,e.job)){const st=e.st||{cook:3,charm:3};const v=e.job.k==='food'?Math.round(foodPrice()*(0.9+0.05*st.cook)):drinkPrice();S.served++;
+      earn(v,c.x,c.y-14,'#9fe8ff',e.job.icon);const w=gt-(e.job.at||gt);addRep((w<15?.01:0)+0.002*(st.charm-3));
+      gainXp(e,'charm',2);useStam(e,1);if(Math.random()<0.04*st.charm)setTimeout(()=>earn(Math.round(v*0.5),c.x,c.y-28,'#ffb3c7','💝'),350);if(e.job.k==='food')e.job.tb.dirt=Math.min(1,e.job.tb.dirt+.04);c.orders=(c.orders||[]).filter(x=>x!==e.job);const sd=c.table.side[c.seat];sd.push(e.job.icon);if(sd.length>2)sd.shift();}
+    serverHome(e);}
+}
+function move(e,dt){
+  let d=SPEED*spdMul(e)*dt;
+  while(d>0&&e.path.length){const p=e.path[0],dx=p.x-e.x,dy=p.y-e.y,L=Math.hypot(dx,dy);
+    const step=Math.min(L,d);if(e.st){e.walk=(e.walk||0)+step;if(e.walk>=300){e.walk-=300;gainXp(e,'spd',1);}}
+    if(L<=d){e.x=p.x;e.y=p.y;e.path.shift();d-=L;}else{e.x+=dx/L*d;e.y+=dy/L*d;e.dir=Math.atan2(dy,dx);d=0;}}
+  if(e.moving&&!e.path.length){e.moving=false;arrive(e);}
+}
+function earn(v,x,y,c,icon){if(v<=0)return;S.money+=v;S.total+=v;S.dayEarn+=v;S.storeEarn+=v;incomeLog.push({t:Date.now(),v});floats.push({x,y,text:(icon||'')+'+¥'+fmt(v),t:0,c:c||'#ffe08a'});}
+function burst(x,y,n,cols){for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,sp=40+Math.random()*120;
+  parts.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:.6+Math.random()*.7,max:1.3,c:cols[i%cols.length],s:1.5+Math.random()*2.5});}}
+
+// 注文は席に着いたときに入れる(実際の雀荘と同じ)。居残った客は半荘の始めに追加注文することがある
+// フリー客が1回の来店で打つ半荘数。平均3半荘(シニアは長め、会社員は短め)
+const PLAN_MEAN={s:3.8,w:2.8,g:3.3}; // 閉店で打ち切られる分を見込んで、実際の平均が約3半荘になるように
+function planGames(t){return Math.max(1,Math.round(PLAN_MEAN[t]+(rnd(-1.6,1.6)+rnd(-1.6,1.6))/2));}
+function placeOrder(c,k){c.orders=c.orders||[];if(c.orders.some(o=>o.k===k))return;const T=CT[c.ctype];
+  const o={tb:c.table,id:c.id,k,icon:k==='food'?T.fi:T.di,at:gt};c.orders.push(o);orders.push(o);}
+function rollOrders(c,m){if(c.type!=='cust'||!c.table)return;const T=CT[c.ctype];
+  if(S.drink&&Math.random()<T.dr*m)placeOrder(c,'drink');if(S.food&&Math.random()<T.fd*m)placeOrder(c,'food');}
+function startGame(tb){
+  tb.state='play';tb.t=0;tb.pend=[];let f=1;tb.seats.map(byId).forEach(m=>{if(isCrew(m))f*=1-0.04*(m.st.mj-1);});
+  tb.dur=TIERS[tierOf(tb)].dur*f;const dur=tb.dur;
+  tb.seats.map(byId).forEach(c=>{if(c&&c.type==='cust'&&c.games>0&&!(c.orders||[]).length)rollOrders(c,.25);});
+}
+// 頼んだものがまだ届いていない客は、受け取ってから帰る(最大15秒待つ)
+// 帰る客は、まだ届いていない注文をキャンセルしてそのまま帰る
+function leaveOrWait(e){leave(e);}
+const canServe=(c,o)=>c&&(c.orders||[]).includes(o)&&c.table===o.tb&&c.state==='seated';
+function endGame(tb){
+  const s=SLOTS[tb.slot];S.games++;tb.state='open';tb.t=0;tb.pend=[];addRep(tb.dirt>.5?-.01:.005);
+  tb.dirt=Math.min(1,tb.dirt+(S.modes[tb.slot]==='set'?.04:.08));
+  if(Math.random()<TIERS[tierOf(tb)].yk)yakuman(tb);
+  const list=tb.seats.map(byId).filter(Boolean);
+  const brk=!tb.manual&&S.tiers[tb.slot]>=1&&Math.random()<(S.tiers[tb.slot]===1?.04:.025)*(S.maint?.5:1);
+  if(S.modes[tb.slot]==='set'){
+    const done=S.clock>=tb.setUntil||S.closing||brk;
+    if(done){const hrs=Math.max(1,(S.clock-tb.setStart)/60);earn(Math.round(setRate(tb)*hrs),s.x,s.y-8,'#ffe08a');list.forEach(e=>leaveOrWait(e));}
+    else list.forEach(e=>{e.sitSince=gt;e.games=(e.games||0)+1;});
+    tb.waitSince=gt;if(brk)breakTable(tb);return;
+  }
+  let sum=0;const per=feePer(tb);
+  list.forEach(e=>{if(e.type!=='cust')return;let f=per;if(e.reg!=null){f=Math.round(per*(1+0.1*hearts(S.regs[e.reg])));S.regs[e.reg]++;addRep(.01);}sum+=f;});
+  let charmB=0;list.forEach(m=>{if(isCrew(m)){charmB+=0.03*m.st.charm;addRep(0.002*(m.st.mj-2));gainXp(m,'mj',3);gainXp(m,'charm',1);useStam(m,2);}});
+  earn(sum,s.x,s.y-8);
+  if(brk){list.forEach(e=>{e.orders=[];if(isCrew(e)){goHome(e);return;}if(S.closing){leave(e);return;}
+      freeSeat(e);const t2=openTable(e);if(t2&&t2!==tb){sendToSeat(e,t2,freeIdx(t2));return;}
+      if(e.type==='cust'&&S.wait){const w=waitSeats.indexOf(null);if(w>=0){sendToWait(e,w);return;}}
+      leave(e,e.type==='pro'?'またね':'💦');});
+    tb.waitSince=gt;breakTable(tb);return;}
+  list.forEach(e=>{
+    if(isCrew(e))goHome(e);
+    else if(e.type==='pro'){if(proOn()&&!S.closing)e.sitSince=gt;else leave(e,'またね');}
+    else{e.games=(e.games||0)+1;
+      // 予定の半荘数まで打つ。予定に達しても、メンバーの愛嬌しだいで「もう1半荘だけ」打つことがある(1回まで)
+      const more=e.games<(e.plan||1)||(!e.extra&&Math.random()<charmB&&(e.extra=1));
+      if(!S.closing&&more)e.sitSince=gt;else leaveOrWait(e);}});
+  tb.waitSince=gt;
+}
+
+// ---------- 役満 ----------
+let bonusT=0,bonusAmt=0;
+function yakuman(tb){playScene('first_yakuman');
+  const s=SLOTS[tb.slot],name=YAKU[Math.random()*YAKU.length|0],amt=feePer(tb)*4*8;
+  S.yaku++;earn(amt,s.x,s.y-26,'#ffd35a');burst(s.x,s.y,70,['#ffd35a','#ffffff','#ff6b6b','#7fd1ff']);shake=.45;
+  document.getElementById('ykBig').textContent='役満!';document.getElementById('ykName').textContent=name;document.getElementById('ykBonus').textContent='役満ボーナス +¥'+fmt(amt);
+  const yk=document.getElementById('yk');yk.classList.remove('show');void yk.offsetWidth;yk.classList.add('show');
+  const fl=document.getElementById('flash');fl.style.transition='none';fl.style.opacity=.7;requestAnimationFrame(()=>{fl.style.transition='opacity .5s';fl.style.opacity=0;});
+  setTimeout(()=>yk.classList.remove('show'),2400);
+  bonusAmt=amt;bonusT=10;const b=document.getElementById('bonus');b.textContent='広告で役満ボーナスをもう一度 +¥'+fmt(amt);b.style.display='block';
+}
+document.getElementById('bonus').onclick=()=>{const amt=bonusAmt;bonusT=0;document.getElementById('bonus').style.display='none';
+  playAd(()=>{earn(amt,AISLE,HI/2,'#ffd35a');toast('役満ボーナス +¥'+fmt(amt));});};
+
+// ---------- 故障と修理 ----------
+const repairCost=i=>pr((S.tiers[i]===1?600:2500)*Math.pow(1.15,i));
+function breakTable(tb){playScene('first_break');tb.broken=true;tb.manual=false;shake=.2;burst(SLOTS[tb.slot].x,SLOTS[tb.slot].y,14,['#888','#bbb','#555']);
+  toast(`${tb.slot+1}番卓が故障しました。卓をタップして対応を選べます`);}
+function fixTable(tb){tb.broken=false;tb.manual=false;tb.repairing=false;S.repairs++;const s=SLOTS[tb.slot];burst(s.x,s.y,24,['#7fe0ff','#ffffff']);toast(`${tb.slot+1}番卓が直りました`);}
+function callTech(tb){tb.repairing=true;const s=SLOTS[tb.slot];
+  const e={id:nid++,type:'tech',outside:1,x:W+16,y:SW,corr:CY,path:[],moving:false,state:'toRepair',dir:-Math.PI/2,body:'#e07a1f',hair:'#2b2118',tb};
+  ents.push(e);route(e,s.x-22,s.y-50,s.y-50);}
+function repairMenu(tb){
+  const i=tb.slot,c=repairCost(i);
+  if(tb.repairing){mcard.innerHTML=`<h2>${i+1}番卓</h2><p>修理業者が作業しています。もう少しお待ちください。</p><button class="mbtn sec" id="rmX">閉じる</button>`;}
+  else{mcard.innerHTML=`<h2>${i+1}番卓が${tb.broken?'故障しています':'手積みで営業中です'}</h2>
+    <p>${tb.broken?'自動で牌を積む仕組みが止まりました。このままでは卓が使えません。':'全自動の機能は止まったままです。半荘が長くなり、場代も手積み卓と同じになっています。'}</p>
+    <button class="mbtn pri" id="rmAd">広告を見てすぐ直す</button>
+    <button class="mbtn sec" id="rmTech" ${S.money<c?'disabled':''}>修理を呼ぶ ¥${fmt(c)}</button>
+    ${tb.broken?'<button class="mbtn sec" id="rmMan">手積みでしのぐ</button>':''}
+    <button class="mbtn sec" id="rmX">閉じる</button>`;}
+  modal.classList.add('show');
+  const q=id=>document.getElementById(id),close=()=>modal.classList.remove('show');
+  q('rmX').onclick=close;
+  if(q('rmAd'))q('rmAd').onclick=()=>{close();playAd(()=>{if(tb.broken||tb.manual)fixTable(tb);save();});};
+  if(q('rmTech'))q('rmTech').onclick=()=>{if(S.money<c)return;S.money-=c;close();callTech(tb);toast('修理業者を呼びました');save();};
+  if(q('rmMan'))q('rmMan').onclick=()=>{tb.broken=false;tb.manual=true;close();toast(`${i+1}番卓を手積みで回します`);save();};
+}
+
+// ---------- ステージと目標 ----------
+let goalShown=-1;
+const isNewest=()=>S.active===S.shops.length-1;
+function checkGoal(){if(goalMet()&&!S.cleared){S.cleared=1;save();
+  const last=S.stage>=STAGES.length-1;playScene(last?'finale':`ch${S.stage}_end`,last?()=>openMap('view'):null);
+  toast(S.stage+1<STAGES.length?`${ST().no}号店の目標を達成しました。次の店を出せます`:'東京の目標を達成。全国制覇です');burst(W/2,HI/2,60,['#ffd35a','#ffffff']);}}
+function drawGoal(){const g=ST().goal,el=document.getElementById('goal');
+  const pe=Math.min(1,S.storeEarn/g.earn),ok=goalMet()||S.cleared,canOpen=ok&&isNewest()&&S.shops.length<STAGES.length;
+  const key=[S.active,S.shops.length,ok,S.money>=((STAGES[S.shops.length]||{}).open||0),Math.floor(pe*100),S.rep.toFixed(1)].join();if(el._k===key)return;el._k=key;
+  el.className=ok?'done':'';
+  const nx=STAGES[S.shops.length];el.innerHTML=canOpen?`<span>目標達成。${nx.area}に${nx.no}号店を出せます(出店費用 ¥${fmt(nx.open)})</span><button type="button" id="openBtn">出店する</button>`
+    :ok?`<span>${S.stage+1>=STAGES.length?'全国制覇! この店は目標達成済みです':'この店は目標達成済みです'}</span>`
+    :`<span>目標 ¥${fmt(S.storeEarn)} / ¥${fmt(g.earn)}  ★${S.rep.toFixed(1)} / ${g.rep.toFixed(1)}</span><i><b style="width:${Math.round(pe*100)}%"></b></i>`;
+  const b=document.getElementById('openBtn');if(b)b.onclick=()=>openMap('open');}
+function openStoreMenu(){const n=STAGES[S.shops.length];if(!n)return;const oc=n.open,short=S.money<oc;
+  mcard.innerHTML=`<h2>${n.no}号店を出店</h2><p>${n.area}の${n.place}に新しい店を出します。場代は1号店の${n.fee}倍ですが、設備や人件費などの物価は${n.cost}倍の街です。卓は最大${n.max}卓です。</p>
+    <p style="font-weight:700;color:var(--ink)">出店費用 ¥${fmt(oc)}(所持金 ¥${fmt(S.money)})</p>
+    <p>新しい店に持っていくのは所持金だけです。スタッフと常連はいまの店に残り、いまの店はそのまま営業を続けます。見ていない店には、最高の売上ペースの1割が入ってきます。</p>
+    <p>お店タブから、いつでも店を切り替えられます。</p>
+    <button class="mbtn pri" id="soGo" ${short?'disabled':''}>${short?`あと ¥${fmt(oc-S.money)} 貯めると出店できます`:'出店費用を払って出店する'}</button><button class="mbtn sec" id="soX">まだ出店しない</button>`;
+  modal.classList.add('show');
+  document.getElementById('soX').onclick=()=>modal.classList.remove('show');
+  document.getElementById('soGo').onclick=()=>{if(S.money<oc)return;modal.classList.remove('show');newStore();};}
+function switchShop(i,quiet){if(i===S.active||!S.shops[i])return;
+  S.tb=tables.map(t=>({d:+t.dirt.toFixed(2),b:t.broken?1:0,m:t.manual?1:0}));S.shops[S.active]=snapShop(S);
+  Object.assign(S,JSON.parse(JSON.stringify(S.shops[i])));S.active=i;REG=REGS[S.stage];
+  incomeLog=[];playTime=0;orders=[];applyLayout();initWorld();save();renderTab();document.getElementById('goal')._k=null;
+  document.getElementById('openOv').classList.remove('show');
+  if(!quiet){toast(`${shopName()}に移動しました`);if(!S.opened)prepareOpening();}}
+function newStore(){if(!isNewest()||S.shops.length>=STAGES.length)return;const oc=STAGES[S.shops.length].open;if(S.money<oc)return;S.money-=oc;
+  S.shops.push(freshShop(S.shops.length,S));switchShop(S.shops.length-1,true);prepareOpening();}
+
+// ---------- 閉店 ----------
+let closeT=0,dayCardT=0;
+function closing(dt){
+  closeT+=dt;
+  ents.forEach(e=>{if(e.type==='cust'&&e.state!=='leaving'&&!(e.table&&e.table.state==='play'))leave(e);
+    if(e.type==='pro'&&e.state!=='leaving'&&!(e.table&&e.table.state==='play'))leave(e);});
+  if(closeT>40)tables.forEach(tb=>{if(tb.state==='play')tb.t=1e9;});
+  if(!ents.some(e=>e.type==='cust'||e.type==='pro'))endDay();
+}
+function endDay(){
+  document.getElementById('dayT').textContent=S.day+'日目 営業終了';
+  document.getElementById('dayE').textContent='¥'+fmt(S.dayEarn);
+  document.getElementById('dayV').textContent=S.dayVisits+'人';
+  document.getElementById('dayR').textContent='★'+S.rep.toFixed(1);
+  document.getElementById('day').classList.add('show');dayCardT=5;S.closing=2;
+  ents.forEach(e=>{if(e.st)e.st.stam=stamMax(e.st);});tables.forEach(t=>{t.dirt=0;t.cleaner=null;t.side=[[],[],[],[]];t.busy=[null,null,null,null];t.busyBy=null;});ents.forEach(e=>{if(e.state==='toClean'||e.state==='cleaning'){if(e.cleanTb)e.cleanTb.cleaner=null;goHome(e);}});orders=[];save();
+}
+function nextDay(){if(S.closing!==2)return;setTimeout(()=>{const k={7:'letter2',15:'pro_visit',22:'letter3'}[S.day];if(k)playScene(k);},600);document.getElementById('day').classList.remove('show');dayCardT=0;
+  S.day++;S.clock=600;S.closing=0;S.dayEarn=0;S.dayVisits=0;spawnT=2;save();toast(S.day+'日目、開店です');}
+document.getElementById('nextDay').onclick=nextDay;
+
+// ---------- update ----------
+function update(dt){
+  gt+=dt;playTime+=dt;updateOutside(dt);
+  if(S.stage===0&&!S.drink&&S.money>=pr(250))playScene('drink_hint');
+  if(S.stage===1&&S.storeEarn>=ST().goal.earn*.25)playScene('pro_meet');
+  const bg=bgIncome();if(bg>0){chainAcc+=bg*dt;if(chainAcc>=1){const v=Math.floor(chainAcc);chainAcc-=v;S.money+=v;S.total+=v;}}
+  checkGoal();
+  if(S.closing===2){if(dayCardT>0){dayCardT-=dt;document.getElementById('dayCount').textContent=Math.ceil(Math.max(0,dayCardT))+'秒後に自動で次の日へ進みます';if(dayCardT<=0)nextDay();}}
+  else if(!S.closing){S.clock+=dt*MINPS;if(S.clock>=1440){S.clock=1440;S.closing=1;closeT=0;toast('閉店時間です。いまの半荘で終わりにします');}}
+  else closing(dt);
+  // 待合室から卓へ
+  ents.filter(e=>e.state==='waiting').sort((a,b)=>a.waitOrder-b.waitOrder).forEach(e=>{
+    const tb=openTable(e);if(tb)sendToSeat(e,tb,freeIdx(tb));
+    else if(gt-e.sitSince>patience()+custPat(e)-40){addRep(-.05);leave(e,'…');}});
+  if(!S.closing){spawnT-=dt;if(spawnT<=0){spawn();spawnT=interval()*(0.7+Math.random()*0.6);}}
+  ents.forEach(e=>{move(e,dt);if(e.bubbleT>0)e.bubbleT-=dt;});
+  // プロ
+  const pro=ents.find(e=>e.type==='pro');
+  if(pro){
+    if(!proOn()&&pro.state!=='leaving'&&!(pro.table&&pro.table.state==='play'))leave(pro,'またね');
+    else if(pro.state==='standby'){const tb=openTable(null);if(tb)sendToSeat(pro,tb,freeIdx(tb));}
+  }
+  tables.forEach(tb=>{
+    const T=TIERS[tierOf(tb)];
+    if(tb.broken){if(Math.random()<dt*3)parts.push({x:SLOTS[tb.slot].x+rnd(-10,10),y:SLOTS[tb.slot].y,vx:rnd(-6,6),vy:-18,life:1.2,max:1.4,c:'rgba(160,160,160,.6)',s:4});return;}
+    if(tb.state==='play'){tb.t+=dt;
+      if(tb.t>=(tb.dur||T.dur))endGame(tb);return;}
+    const oc=tb.seats.map(byId).filter(Boolean);
+    const custs=oc.filter(e=>e.type==='cust');
+    if(oc.length===4&&oc.every(e=>e.state==='seated')){startGame(tb);return;}
+    if(!custs.length){oc.forEach(e=>{if(isCrew(e)&&e.state!=='returning')goHome(e);});return;}
+    if(S.modes[tb.slot]==='set')return;
+    custs.forEach(e=>{if(e.state==='seated'&&gt-e.sitSince>custPat(e)){addRep(-.05);leave(e,'…');}});
+    // メンバーは、お客さん(プロを含む)が3人席に着いてから4人目として入る
+    if(oc.length<4&&oc.filter(e=>!isCrew(e)&&e.state==='seated').length>=3&&!oc.some(isCrew)){
+      const st=ents.find(e=>e.type==='staff'&&e.state==='idle'&&!e.st.quitting)||ents.find(e=>e.type==='boss'&&e.state==='idle');
+      if(st){const k=freeIdx(tb);if(k>=0){sendToSeat(st,tb,k);tb.waitSince=gt-2;}}
+    }
+  });
+  // 休憩:休憩室で体力を回復し、満タンになったら持ち場に戻る(約20秒)
+  ents.forEach(e=>{if(!e.st)return;if(e.st.stam==null)e.st.stam=stamMax(e.st);
+    if(e.state==='resting'){e.st.stam=Math.min(stamMax(e.st),e.st.stam+stamMax(e.st)/20*dt);
+      if(e.st.stam>=stamMax(e.st)){e.restSpot=null;gainXp(e,'sta',3);
+        if(e.type==='hall'){e.state='returning';route(e,HALLHOME.x,HALLHOME.y,HOMEY);}else{e.state='returning';const h=home(e.idx);route(e,h.x,h.y,HOMEY);}}}
+    else if(e.state==='idle'&&tired(e))goRest(e);});
+  // 退職予約の実行
+  ents.filter(e=>e.st&&e.st.quitting).forEach(e=>{
+    if(e.state==='idle'){const role=e.type==='hall'?'hall':'member';doDismiss({m:e.st,role});}else releaseIfWaiting(e);});
+  // 注文の提供(ホールスタッフと、卓に入っていないメンバー)
+  ents.filter(e=>e.type==='hall').concat(ents.filter(e=>e.type==='staff'),ents.filter(e=>e.type==='boss')).forEach(e=>{
+    if(e.type==='boss'&&e.state==='idle'&&e.job){if(e.job.k==='drink'){e.state='prep';e.timer=0.5*cookMul(e);}else{e.state='toKitchen';route(e,KIT.x-36,KIT.y,KIT.corr);}}
+    else if(e.state==='idle'&&S.closing!==2&&!e.st.quitting){
+      while(orders.length){const o=orders.shift();if(canServe(byId(o.id),o)){e.job=o;break;}}
+      if(!e.job){ // 注文がなければ、帰った客のサイドテーブルを片づける
+        for(const tb of tables){if(tb.busyBy)continue;const k=[0,1,2,3].find(k=>tb.seats[k]===null&&tb.side[k].length);
+          if(k!==undefined){tb.busyBy=e.id;e.bus={tb,k};e.state='toBus';const p=seatPos(tb,k),q=sidePos(tb,k);route(e,q.x,p.corr,p.corr);break;}}}
+      if(e.job){if(e.job.k==='drink'){e.state='prep';e.timer=0.5*cookMul(e);}else{e.state='toKitchen';route(e,KIT.x+(e.type==='hall'?0:-18),KIT.y,KIT.corr);}}
+    }else if(e.state==='busing'){e.timer-=dt;
+      // その卓の、客が帰った席のサイドテーブルをまとめて片づける(座っている客の器は残す)
+      if(e.timer<=0){const {tb}=e.bus;let n=0;[0,1,2,3].forEach(k=>{if(tb.seats[k]===null&&tb.side[k].length){n+=tb.side[k].length;tb.side[k]=[];const q=sidePos(tb,k);burst(q.x,q.y,6,['#ffffff','#bff4ff']);}});
+        e.carry=n?['x']:null;tb.busyBy=null;e.bus=null;useStam(e,1);serverHome(e);}
+    }else if(e.state==='prep'||e.state==='cook'){
+      e.timer-=dt;
+      if(e.state==='cook'&&Math.random()<dt*8)parts.push({x:e.x+rnd(-6,6),y:KIT.y+24,vx:rnd(-4,4),vy:-22,life:1,max:1.2,c:'rgba(255,255,255,.7)',s:3});
+      if(e.timer<=0){gainXp(e,'cook',e.state==='cook'?2:1);if(e.state==='cook')useStam(e,1);const c=byId(e.job.id);
+        if(canServe(c,e.job)){e.state='deliver';const p=seatPos(c.table,c.seat);route(e,p.x,p.corr,p.corr);}
+        else serverHome(e);}
+    }
+  });
+  // 立ち番の掃除と修理業者
+  ents.forEach(e=>{
+    if(isCrew(e)&&e.state==='idle'&&!S.closing&&!e.st.quitting){
+      const tb=tables.filter(t=>t.dirt>=.35&&t.state!=='play'&&!t.cleaner).sort((a,b)=>b.dirt-a.dirt)[0];
+      if(tb){tb.cleaner=e.id;e.cleanTb=tb;e.state='toClean';const s=SLOTS[tb.slot];route(e,s.x+22,s.y-50,s.y-50);}}
+    if(e.state==='cleaning'){e.timer-=dt;const tb=e.cleanTb,s=SLOTS[tb.slot];
+      if(Math.random()<dt*10)parts.push({x:s.x+rnd(-20,20),y:s.y+rnd(-20,20),vx:0,vy:-10,life:.5,max:.6,c:'#ffffff',s:2});
+      if(tb.state==='play'){tb.cleaner=null;goHome(e);}
+      else if(e.timer<=0){tb.dirt=0;tb.cleaner=null;S.cleans++;useStam(e,1);burst(s.x,s.y,10,['#bff4ff','#ffffff']);goHome(e);}}
+    if(e.type==='tech'&&e.state==='repairing'){e.timer-=dt;const s=SLOTS[e.tb.slot];
+      if(Math.random()<dt*6)burst(s.x+rnd(-12,12),s.y+rnd(-12,12),2,['#ffe27a','#ffffff']);
+      if(e.timer<=0){fixTable(e.tb);leave(e);}}
+  });
+  if(S.deco.speaker){noteT-=dt;if(noteT<=0){noteT=1.6/S.deco.speaker;const sp=[[16,158],[W-18,372],[16,308],[W-18,158]].slice(0,S.deco.speaker>=3?4:2);const p=pick(sp);floats.push({x:p[0],y:p[1],text:'♪',t:0,c:'#ffffff',small:1});}}
+  floats.forEach(f=>f.t+=dt);floats=floats.filter(f=>f.t<1.4);
+  parts.forEach(p=>{p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=.96;p.vy=p.vy*.96+30*dt;p.life-=dt;});parts=parts.filter(p=>p.life>0);
+  if(shake>0)shake-=dt;
+  if(bonusT>0){bonusT-=dt;if(bonusT<=0)document.getElementById('bonus').style.display='none';}
+}
+
+// ---------- draw ----------
+var cv=document.getElementById('cv'),ctx=cv.getContext('2d');let scale=1,dpr=1;
+// ドット絵風:店内の絵は低解像度のバッファに描いて拡大(補間なし)。文字だけは本体のキャンバスにくっきり描く
+const BS=0.75,buf=document.createElement('canvas'),bctx=buf.getContext('2d'),textQ=[];
+const PIXFONT='"DotGothic16","Zen Kaku Gothic New",sans-serif';
+function capText(op,t,x,y){const m=bctx.getTransform&&bctx.getTransform();if(!m)return;textQ.push({op,t:String(t),x:(m.a*x+m.c*y+m.e)/BS,y:(m.b*x+m.d*y+m.f)/BS,sc:Math.hypot(m.a,m.b)/BS,
+  font:bctx.font,fill:bctx.fillStyle,stroke:bctx.strokeStyle,lw:bctx.lineWidth,align:bctx.textAlign,base:bctx.textBaseline,alpha:bctx.globalAlpha});}
+bctx.fillText=(t,x,y)=>capText('f',t,x,y);bctx.strokeText=(t,x,y)=>capText('s',t,x,y);
+function replayText(){textQ.forEach(q=>{const m=/^(.*?)(\d+(?:\.\d+)?)px/.exec(q.font);const size=m?parseFloat(m[2])*q.sc:10;
+  ctx.font=`${m?m[1]:''}${size}px ${PIXFONT}`;ctx.textAlign=q.align;ctx.textBaseline=q.base;ctx.globalAlpha=q.alpha;
+  if(q.op==='s'){ctx.lineWidth=q.lw;ctx.strokeStyle=q.stroke;ctx.strokeText(q.t,q.x,q.y);}else{ctx.fillStyle=q.fill;ctx.fillText(q.t,q.x,q.y);}});ctx.globalAlpha=1;}
+function fit(){const st=document.getElementById('stage');scale=Math.min(st.clientWidth/W,st.clientHeight/H);
+  const cw=Math.floor(W*scale),ch=Math.floor(H*scale);cv.style.width=cw+'px';cv.style.height=ch+'px';
+  dpr=window.devicePixelRatio||1;cv.width=Math.round(cw*dpr);cv.height=Math.round(ch*dpr);buf.width=Math.round(W*BS);buf.height=Math.round(H*BS);}
+const planks=[];
+function rr(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+function tag(t,x,y,bg,fg,size){size=size||8;ctx.font=`bold ${size}px sans-serif`;const w=t.length*size+8;ctx.fillStyle='rgba(0,0,0,.35)';rr(x-w/2+1,y-size/2-2,w,size+5,3);ctx.fill();
+  ctx.fillStyle=bg;rr(x-w/2,y-size/2-3,w,size+5,3);ctx.fill();label(t,x,y,size,fg);return w;}
+function label(t,x,y,size,col){ctx.fillStyle=col||'rgba(255,255,255,.4)';ctx.font=`${size||11}px "Zen Kaku Gothic New",sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(t,x,y);}
+function dashed(x,y,w,h){ctx.save();ctx.setLineDash([4,4]);ctx.strokeStyle='rgba(255,255,255,.28)';ctx.lineWidth=1.5;rr(x,y,w,h,6);ctx.stroke();ctx.restore();}
+function drawFloor(){
+  drawFloorPattern();
+  const ga=[.16,.3,.38,.46][S.deco.light];
+  tables.forEach(tb=>{const s=SLOTS[tb.slot];const g=ctx.createRadialGradient(s.x,s.y,10,s.x,s.y,90);g.addColorStop(0,`rgba(255,236,190,${ga})`);g.addColorStop(1,'rgba(255,236,190,0)');ctx.fillStyle=g;ctx.fillRect(s.x-90,s.y-90,180,180);});
+  if(S.deco.light){ctx.fillStyle=`rgba(255,190,110,${.04+.02*S.deco.light})`;ctx.fillRect(0,0,W,HI);}
+  if(S.deco.light>=3){for(let i=0;i<6;i++){const x=DOOR+Math.cos(gt*.7+i)*22,y=300+Math.sin(gt*.7+i)*10;ctx.fillStyle=`rgba(255,240,200,${.25+.2*Math.sin(gt*3+i)})`;ctx.fillRect(x,y,2,2);}}
+  // 待合室(カウンター前)
+  if(S.wait){ctx.fillStyle='#4b3d5c';rr(8,8,144,92,6);ctx.fill();ctx.strokeStyle='#6a587e';ctx.lineWidth=1;ctx.stroke();
+    [26,90].forEach(x=>{ctx.fillStyle='#5a2a36';rr(x-3,66,60,26,6);ctx.fill();ctx.fillStyle='#8a3d4e';rr(x+2,68,50,17,5);ctx.fill();
+      ctx.fillStyle='#9e4a5c';rr(x+4,70,22,13,4);ctx.fill();rr(x+28,70,22,13,4);ctx.fill();ctx.fillStyle='#4a2230';rr(x-3,85,60,7,3);ctx.fill();});
+    if(S.tv){ctx.fillStyle='#111';rr(58,10,46,6,2);ctx.fill();const c=['#4bb0e0','#e0a526','#6ad06a','#e04b4b'][Math.floor(gt*1.5)%4];
+      ctx.fillStyle=c;ctx.globalAlpha=.8;ctx.fillRect(60,11,42,3);ctx.globalAlpha=1;
+      const g=ctx.createLinearGradient(0,16,0,58);g.addColorStop(0,c+'55');g.addColorStop(1,c+'00');ctx.fillStyle=g;ctx.fillRect(56,16,50,42);}
+    if(S.manga){ctx.fillStyle='#5a3a22';ctx.fillRect(10,20,10,74);const mc=['#e04b4b','#f0c040','#4bb0e0','#6ad06a','#f08a3c','#b8456f'];
+      for(let i=0;i<14;i++){ctx.fillStyle=mc[i%6];ctx.fillRect(11,22+i*5,8,4);}}
+    if(S.mag){ctx.fillStyle='#6b4428';rr(118,12,26,10,2);ctx.fill();['#ff8fb1','#fff27a','#8fd6ff'].forEach((c,i)=>{ctx.fillStyle=c;ctx.fillRect(121+i*7,13,6,8);});}
+  }else{dashed(8,8,144,92);label('待合室(未開放)',81,68);}
+  // 右奥:上が厨房、下がスタッフ休憩室(どちらも壁と扉で客席から隔離)
+  ctx.save();ctx.translate(W-360,0);
+  if(S.food){
+    ctx.fillStyle='#d8dde0';ctx.fillRect(264,6,92,52);ctx.fillStyle='#c3c9cd';
+    for(let i=0;i<6;i++)for(let j=0;j<4;j++)if((i+j)%2)ctx.fillRect(264+i*15.3,6+j*13,15.3,13);
+    ctx.fillStyle='#8b9399';rr(270,34,58,20,3);ctx.fill();ctx.fillStyle='#2b2f36';[[286,44],[310,44]].forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,6.5,0,7);ctx.fill();});
+    const cooks=ents.filter(e=>e.state==='cook');
+    if(cooks.length){ctx.fillStyle='#ff6a2a';ctx.globalAlpha=.6+.4*Math.sin(gt*20);ctx.beginPath();ctx.arc(310,44,4,0,7);if(cooks.length>1)ctx.arc(286,44,4,0,7);ctx.fill();ctx.globalAlpha=1;}
+    ctx.fillStyle='#f4f6f7';rr(334,9,18,24,2);ctx.fill();ctx.fillStyle='#b8c0c6';ctx.fillRect(336,20,14,1);
+    ctx.fillStyle='#e8e8e8';rr(334,36,16,18,2);ctx.fill();
+  }else{dashed(264,8,88,48);label('厨房(未開放)',308,32,10);}
+  // 休憩室
+  ctx.fillStyle='#6f7a6a';ctx.fillRect(264,62,92,48);ctx.fillStyle='rgba(255,255,255,.05)';for(let i=0;i<6;i++)ctx.fillRect(264+i*16,62,1,48);
+  ctx.fillStyle='#9aa3ad';rr(330,64,22,16,2);ctx.fill();ctx.fillStyle='#7a838d';ctx.fillRect(341,64,1,16);ctx.fillRect(335,70,2,2);ctx.fillRect(346,70,2,2);
+  ctx.fillStyle='#5a3a4a';rr(268,96,84,11,4);ctx.fill();ctx.fillStyle='#7a4a5e';rr(270,97,80,7,3);ctx.fill();
+  tag('休憩室',292,70,'#23272f','#e8ecf2',7);
+  // 壁と扉
+  ctx.fillStyle='#2a2f3a';ctx.fillRect(260,32,4,26);ctx.fillRect(260,58,96,4);ctx.fillRect(260,62,4,14);ctx.fillRect(260,104,4,8);ctx.fillRect(260,110,96,4);
+  const door=(hy,cy)=>{let open=0;ents.forEach(e=>{open=Math.max(open,1-Math.hypot(e.x-(W-98),e.y-cy)/24);});
+    ctx.save();ctx.translate(262,hy);ctx.rotate(Math.PI/2-open*1.3);ctx.fillStyle='#8a5a34';ctx.fillRect(0,-2,24,4);ctx.fillStyle='#c8a04a';ctx.fillRect(19,-1,2,2);ctx.restore();};
+  door(8,HOMEY);door(76,BREAK_CORR);
+  ctx.restore();
+  // 壁
+  ctx.fillStyle='#2a2f3a';ctx.fillRect(0,0,W,6);ctx.fillRect(0,0,4,HI);ctx.fillRect(W-4,0,4,HI);
+  ctx.fillRect(0,HI-6,DOOR-24,6);ctx.fillRect(DOOR+24,HI-6,W-DOOR-24,6);
+  // ドリンク棚(カウンター奥の壁)
+  ctx.fillStyle='#39404d';ctx.fillRect(COUNTER_X+6,5,88,6);
+  if(S.drink){const dc=['#e04b4b','#f0c040','#4bb0e0','#6ad06a','#f08a3c'];const nd=Math.min(4+S.drink*3,17);for(let i=0;i<nd;i++){ctx.fillStyle=dc[i%5];ctx.fillRect(COUNTER_X+8+i*5,6,3,4);}}
+  // カウンター
+  ctx.fillStyle='#4a2f1c';rr(COUNTER_X,34,98,24,3);ctx.fill();ctx.fillStyle='#6b4428';rr(COUNTER_X,34,98,8,3);ctx.fill();
+  ctx.fillStyle='#222';rr(COUNTER_X+58,30,20,14,2);ctx.fill();ctx.fillStyle='#7fe0a0';ctx.fillRect(COUNTER_X+61,32,14,4);
+  tag('待合',40,24,'#23272f','#e8ecf2',8);tag('受付',COUNTER_X+14,65,'#23272f','#e8ecf2',8);if(S.food)tag('厨房',W-78,14,'#23272f','#e8ecf2',7);
+  // 内装小物
+  const pl=[[W-16,248],[12,364],[W-16,CY]];for(let i=0;i<S.deco.plant;i++){const[x,y]=pl[i];ctx.save();ctx.translate(x,y);const sc=S.deco.plant>=3?1.3:1;ctx.scale(sc,sc);ctx.translate(-x,-y);
+    ctx.fillStyle='#5a3a22';ctx.beginPath();ctx.arc(x,y,7,0,7);ctx.fill();ctx.fillStyle='#2f8a4a';for(let a=0;a<6;a++){ctx.beginPath();ctx.ellipse(x+Math.cos(a)*6,y+Math.sin(a)*6,6,3,a,0,7);ctx.fill();}ctx.restore();}
+  if(S.deco.clock===1){ctx.fillStyle='#f4f1e8';ctx.beginPath();ctx.arc(182,6,6,0,7);ctx.fill();ctx.strokeStyle='#222';ctx.lineWidth=1;ctx.stroke();
+    ctx.beginPath();ctx.moveTo(182,6);ctx.lineTo(182+Math.cos(gt*.5)*4,6+Math.sin(gt*.5)*4);ctx.stroke();}
+  else if(S.deco.clock===2){ctx.fillStyle='#6b4428';rr(174,2,16,22,3);ctx.fill();ctx.fillStyle='#f4f1e8';ctx.beginPath();ctx.arc(182,9,5,0,7);ctx.fill();
+    ctx.strokeStyle='#c8a04a';ctx.lineWidth=1;ctx.beginPath();const sw=Math.sin(gt*3)*3;ctx.moveTo(182,14);ctx.lineTo(182+sw,21);ctx.stroke();ctx.fillStyle='#c8a04a';ctx.beginPath();ctx.arc(182+sw,21,1.8,0,7);ctx.fill();}
+  else if(S.deco.clock>=3){ctx.fillStyle='#111';rr(164,2,36,12,2);ctx.fill();const cm=Math.floor(Math.min(S.clock,1439));
+    label(String(Math.floor(cm/60)).padStart(2,'0')+':'+String(cm%60).padStart(2,'0'),182,8.5,8,'#63ff9a');}
+  if(S.deco.speaker){const sz=S.deco.speaker>=2?1.4:1,sp=[[4,150],[W-13,364]].concat(S.deco.speaker>=3?[[4,300],[W-13,150]]:[]);
+    sp.forEach(([x,y])=>{ctx.fillStyle='#111';rr(x,y,9,14*sz,2);ctx.fill();ctx.fillStyle='#555';ctx.beginPath();ctx.arc(x+4.5,y+7*sz,3,0,7);ctx.fill();});}
+  if(S.deco.purifier){const big=S.deco.purifier>=2,u=[[W-28,118]].concat(S.deco.purifier>=3?[[8,236]]:[]);
+    u.forEach(([x,y])=>{const w=big?18:14;ctx.fillStyle='#f2f4f5';rr(x-(w-14),y,w,w,3);ctx.fill();ctx.fillStyle=`rgba(90,180,255,${.6+.4*Math.sin(gt*2)})`;ctx.fillRect(x-(w-14)+3,y+3,w-6,2);});}
+  if(S.deco.art){const fr=S.deco.art>=2?'#e0b44a':'#8a5a34',hh=S.deco.art>=2?56:36;
+    const pic=(x,c1,c2)=>{ctx.fillStyle=fr;const ay=HI-136;ctx.fillRect(x,ay,7,hh);ctx.fillStyle=c1;ctx.fillRect(x+1,ay+2,5,hh-4);ctx.fillStyle=c2;ctx.fillRect(x+1,ay+14,5,10);};
+    pic(4,'#2f5f8a','#e0a526');if(S.deco.art>=3)pic(W-11,'#7a1f2e','#f4f1e8');}
+  // 入口マットとネオン
+  ctx.fillStyle='#3a2a4a';rr(AISLE-22,HI-20,44,14,3);ctx.fill();
+  const fl=.85+.15*Math.sin(gt*9)*(Math.random()>.97?0:1),ng=S.deco.neon;
+  const hue=ng>=3?(gt*60)%360:350,col=a=>`hsla(${hue},100%,${ng>=3?65:62}%,${a})`;
+  ctx.save();ctx.shadowColor=col(1);ctx.shadowBlur=[12,20,28,32][ng]*fl;ctx.strokeStyle=col(fl);ctx.lineWidth=2;
+  if(ng>=2){const nm=shopName().slice(0,8),nw=Math.max(70,nm.length*10+10);rr(AISLE+28,HI-4,nw,16,5);ctx.stroke();label(nm,AISLE+28+nw/2,HI+4.5,10,col(fl));}
+  else if(ng===1){rr(AISLE+28,HI-2,34,14,4);ctx.stroke();label('雀荘',AISLE+45,HI+5.5,10,col(fl));}
+  else{ctx.beginPath();ctx.arc(AISLE+36,HI+4,7,0,7);ctx.stroke();label('雀',AISLE+36,HI+4.5,9,col(fl));}
+  ctx.restore();
+}
+// ---------- 店の外(歩道と道路) ----------
+let peds=[],cars=[],pedT=1,carT=3;
+function nightLevel(){const h=S.clock/60;return h>=20?1:h>=17?(h-17)/3:0;}
+function updateOutside(dt){
+  pedT-=dt;if(pedT<=0){pedT=rnd(.8,2.2)/ST().traffic;const r=Math.random()<.5;
+    peds.push({id:nid++,x:r?-14:W+14,y:SW+(r?-10:10)+rnd(-3,3),v:(r?1:-1)*rnd(34,52),body:pick(pick([CT.s,CT.w,CT.g]).body),hair:pick(HAIR_ALL),moving:true});}
+  carT-=dt;if(carT<=0){carT=rnd(2.5,7);const r=Math.random()<.5;cars.push({x:r?-40:W+40,y:HI+(r?62:78),v:(r?1:-1)*rnd(90,140),c:pick(['#d9d9d9','#c0392b','#2c3e50','#f1c40f','#1f6f8b','#7f8c8d'])});}
+  peds.forEach(p=>{p.x+=p.v*dt;p.dir=p.v>0?0:Math.PI;});peds=peds.filter(p=>p.x>-30&&p.x<W+30);
+  cars.forEach(c=>c.x+=c.v*dt);cars=cars.filter(c=>c.x>-60&&c.x<W+60);
+}
+const HAIR_ALL=['#2b2118','#5a3a22','#1a1a1a','#c9b18a','#bdbdbd'];
+function drawOutside(){
+  ctx.fillStyle='#8d9096';ctx.fillRect(0,HI,W,48);ctx.fillStyle='rgba(0,0,0,.12)';
+  for(let x=0;x<W;x+=24)ctx.fillRect(x,HI,1,48);ctx.fillRect(0,HI+24,W,1);
+  ctx.fillStyle='#6b6e73';ctx.fillRect(0,HI+46,W,4);
+  ctx.fillStyle='#2f3136';ctx.fillRect(0,HI+50,W,H-HI-50);
+  ctx.fillStyle='#e8e2c8';for(let x=((-gt*0)%40);x<W;x+=40)ctx.fillRect(x+6,HI+69,20,2);
+  // 店先
+  ctx.fillStyle='#1d2029';ctx.fillRect(0,HI,DOOR-24,3);ctx.fillRect(DOOR+24,HI,W-DOOR-24,3);
+  ctx.fillStyle='#6b4428';rr(DOOR-70,HI+10,18,14,2);ctx.fill();label('雀',DOOR-61,HI+17.5,9,'#fff');
+  cars.forEach(c=>{ctx.fillStyle='rgba(0,0,0,.3)';rr(c.x-17,c.y-5,36,14,4);ctx.fill();ctx.fillStyle=c.c;rr(c.x-18,c.y-7,36,14,4);ctx.fill();
+    ctx.fillStyle='rgba(20,30,40,.7)';rr(c.x-6,c.y-5,14,10,2);ctx.fill();});
+}
+function drawOutsideNight(){const n=nightLevel();if(n<=0)return;
+  ctx.fillStyle=`rgba(8,12,34,${.5*n})`;ctx.fillRect(0,HI,W,H-HI);
+  [[60,HI+44],[W-60,HI+44]].forEach(([x,y])=>{const g=ctx.createRadialGradient(x,y,2,x,y,46);g.addColorStop(0,`rgba(255,230,160,${.5*n})`);g.addColorStop(1,'rgba(255,230,160,0)');ctx.fillStyle=g;ctx.fillRect(x-46,y-46,92,92);});
+  const g=ctx.createRadialGradient(DOOR,HI,4,DOOR,HI,60);g.addColorStop(0,`rgba(255,220,170,${.45*n})`);g.addColorStop(1,'rgba(255,220,170,0)');ctx.fillStyle=g;ctx.fillRect(DOOR-60,HI,120,60);
+  cars.forEach(c=>{const d=Math.sign(c.v);ctx.fillStyle=`rgba(255,245,200,${.8*n})`;ctx.fillRect(c.x+d*18-1,c.y-5,2,3);ctx.fillRect(c.x+d*18-1,c.y+2,2,3);});
+}
+function drawStreetlamps(){[[60,HI+44],[W-60,HI+44]].forEach(([x,y])=>{ctx.fillStyle='#3a3d42';ctx.beginPath();ctx.arc(x,y,3.5,0,7);ctx.fill();});}
+// ---------- 店ごとの床 ----------
+const hash=(x,y)=>{let h=(x*374761393+y*668265263)^0x5bd1e995;h=(h^(h>>>13))*1274126177;return((h^(h>>>16))>>>0)/4294967296;};
+function drawFloorPattern(){const f=ST().floorType||'wood';
+  if(f==='wood'){ // 1号店:使い込んだ木の床
+    planks.forEach(p=>p.row.forEach(b=>{ctx.fillStyle=`hsl(30,38%,${34+b.s*10}%)`;ctx.fillRect(b.x,p.y,b.w-1,15);
+      ctx.fillStyle='rgba(0,0,0,.12)';ctx.fillRect(b.x+b.w-1,p.y,1,15);}));
+    ctx.fillStyle='rgba(0,0,0,.18)';for(let y=15;y<HI;y+=16)ctx.fillRect(0,y,W,1);}
+  else if(f==='carpet'){ // 2号店:グレーのタイルカーペット(向きを交互に)
+    const T=24;for(let y=0;y<HI;y+=T)for(let x=0;x<W;x+=T){const i=x/T,j=y/T,v=hash(i,j);
+      ctx.fillStyle=`hsl(215,12%,${30+v*4}%)`;ctx.fillRect(x,y,T,T);ctx.fillStyle='rgba(255,255,255,.05)';
+      for(let k=3;k<T;k+=4){if((i+j)%2)ctx.fillRect(x+k,y+1,1,T-2);else ctx.fillRect(x+1,y+k,T-2,1);}
+      ctx.fillStyle='rgba(0,0,0,.18)';ctx.fillRect(x,y,T,1);ctx.fillRect(x,y,1,T);}}
+  else if(f==='checker'){ // 3号店:ベージュとこげ茶の市松タイル
+    const T=28;for(let y=0;y<HI;y+=T)for(let x=0;x<W;x+=T){const i=x/T,j=y/T,v=hash(i,j);
+      ctx.fillStyle=(i+j)%2?`hsl(34,26%,${64+v*4}%)`:`hsl(26,24%,${47+v*4}%)`;ctx.fillRect(x,y,T,T);
+      ctx.fillStyle='rgba(255,255,255,.08)';ctx.fillRect(x+2,y+2,T-8,2);ctx.fillStyle='rgba(0,0,0,.2)';ctx.fillRect(x,y+T-1,T,1);ctx.fillRect(x+T-1,y,1,T);}}
+  else if(f==='redcarpet'){ // 4号店:柄入りの赤いじゅうたん
+    ctx.fillStyle='#7a1f2a';ctx.fillRect(0,0,W,HI);const T=32;
+    for(let y=0;y<HI;y+=T)for(let x=0;x<W;x+=T){const cx=x+T/2,cy=y+T/2;
+      ctx.fillStyle='rgba(255,196,90,.18)';ctx.beginPath();ctx.moveTo(cx,cy-9);ctx.lineTo(cx+9,cy);ctx.lineTo(cx,cy+9);ctx.lineTo(cx-9,cy);ctx.closePath();ctx.fill();
+      ctx.fillStyle='rgba(20,0,5,.35)';ctx.beginPath();ctx.moveTo(cx,cy-4);ctx.lineTo(cx+4,cy);ctx.lineTo(cx,cy+4);ctx.lineTo(cx-4,cy);ctx.closePath();ctx.fill();
+      ctx.fillStyle='rgba(255,196,90,.12)';ctx.fillRect(x,y,2,2);}
+    ctx.strokeStyle='rgba(230,180,80,.45)';ctx.lineWidth=3;ctx.strokeRect(10,10,W-20,HI-20);ctx.lineWidth=1;ctx.strokeRect(16,16,W-32,HI-32);}
+  else if(f==='marble'){ // 5号店:黒い大理石と金の目地
+    const T=40;for(let y=0;y<HI;y+=T)for(let x=0;x<W;x+=T){const i=x/T,j=y/T,v=hash(i,j);
+      ctx.fillStyle=`hsl(220,8%,${12+v*5}%)`;ctx.fillRect(x,y,T,T);
+      ctx.strokeStyle=`rgba(230,230,240,${.1+v*.12})`;ctx.lineWidth=1;ctx.beginPath();const a=hash(j,i)*T;
+      ctx.moveTo(x,y+a);ctx.quadraticCurveTo(x+T*.5,y+hash(i+7,j)*T,x+T,y+hash(i+1,j)*T);ctx.stroke();
+      ctx.fillStyle='rgba(200,160,74,.28)';ctx.fillRect(x,y,T,1);ctx.fillRect(x,y,1,T);}}
+}
+function drawSlot(i){if(i>=Math.max(ST().max,tables.length)){const s=SLOTS[i];ctx.fillStyle='rgba(10,12,18,.55)';rr(s.x-58,s.y-58,116,116,6);ctx.fill();label('区画外',s.x,s.y,11,'rgba(255,255,255,.3)');return;}const s=SLOTS[i];dashed(s.x-30,s.y-30,60,60);label(i===tables.length?'増設できます':'空き',s.x,s.y,11,'rgba(255,255,255,.35)');}
+function tilesRing(x,y,p,back){
+  for(let side=0;side<4;side++){ctx.save();ctx.translate(x,y);ctx.rotate(side*Math.PI/2);
+    const left=Math.max(0,8-Math.floor(p*9.6)+(side%2));
+    ctx.fillStyle=back;for(let i=0;i<left;i++)ctx.fillRect(-16+i*4,-14,3.4,4);
+    ctx.fillStyle='#f3ead6';for(let i=0;i<7;i++)ctx.fillRect(-12+i*3.6,-22,3,3.5);
+    const river=Math.floor(p*6);ctx.fillStyle='#fbf6ea';for(let i=0;i<river;i++)ctx.fillRect(-7+(i%3)*4.5,-9,4,3.4);
+    ctx.restore();}
+}
+function shuffle(tb,x,y,back){ctx.fillStyle=back;for(let i=0;i<26;i++){const a=i*2.4+tb.slot,r=4+(i*7%17);ctx.save();ctx.translate(x+Math.cos(a+gt*3)*r*.9,y+Math.sin(a*1.3+gt*3)*r*.9);ctx.rotate(a+gt*4);ctx.fillRect(-1.7,-2,3.4,4);ctx.restore();}}
+function drawDirt(tb,x,y){if(tb.dirt<.25)return;const n=Math.min(9,Math.floor(tb.dirt*10));
+  for(let i=0;i<n;i++){const a=i*2.39+tb.slot*1.7,r=15+(i*5%9),px=x+Math.cos(a)*r,py=y+Math.sin(a)*r;
+    if(i%3===0){ctx.strokeStyle='rgba(90,55,25,.55)';ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(px,py,3.2,0,7);ctx.stroke();}
+    else{ctx.fillStyle='rgba(70,45,20,.6)';ctx.fillRect(px,py,1.6,1.6);ctx.fillRect(px+2.5,py+1,1.2,1.2);}}}
+function drawTable(tb){
+  const s=SLOTS[tb.slot],t=S.tiers[tb.slot],T=TIERS[tierOf(tb)],x=s.x,y=s.y,play=tb.state==='play',p=play?Math.min(1,tb.t/(tb.dur||T.dur)):0;
+  ctx.fillStyle=t===2?'#1d1d22':'#5a3b26';OFF.forEach(o=>{rr(x+o[0]*1.08-9,y+o[1]*1.08-9,18,18,t===2?6:3);ctx.fill();});
+  for(let k=0;k<4;k++){const q=sidePos(tb,k);ctx.fillStyle='rgba(0,0,0,.25)';rr(q.x-6,q.y-5,13,13,3);ctx.fill();
+    ctx.fillStyle='#f6f6f3';rr(q.x-6.5,q.y-6.5,13,13,3);ctx.fill();ctx.strokeStyle='#c9c9c4';ctx.lineWidth=1;ctx.stroke();
+    const it=tb.side[k];if(it.length){ctx.font='8px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+      it.forEach((ic,j)=>ctx.fillText(ic,q.x+(it.length>1?(j?3:-3):0),q.y+(it.length>1?(j?2.5:-2.5):0)));
+      if(tb.seats[k]===null){ctx.strokeStyle=`rgba(255,120,120,${.5+.3*Math.sin(gt*5)})`;ctx.lineWidth=1.5;rr(q.x-8,q.y-8,16,16,4);ctx.stroke();}}}
+  ctx.fillStyle='rgba(0,0,0,.3)';rr(x-30,y-28,64,64,8);ctx.fill();
+  if(t===0){ // 普通の机に麻雀マット
+    ctx.fillStyle='#8a5a34';rr(x-30,y-30,60,60,3);ctx.fill();ctx.strokeStyle='#6d4526';ctx.lineWidth=1;ctx.strokeRect(x-27,y-27,54,54);
+    ctx.fillStyle='#2e7d4f';rr(x-24,y-24,48,48,10);ctx.fill();
+    if(play&&p<.15)shuffle(tb,x,y,T.back);
+    else if(play)tilesRing(x,y,(p-.15)/.85,T.back);
+  }else if(t===1){ // 家庭用
+    ctx.fillStyle='#d9ccb0';rr(x-31,y-31,62,62,10);ctx.fill();ctx.fillStyle='#2f8a5a';rr(x-25,y-25,50,50,5);ctx.fill();
+    if(play)(tb.manual&&p<.15?shuffle(tb,x,y,T.back):tilesRing(x,y,tb.manual?(p-.15)/.85:p,T.back));
+    ctx.fillStyle='#e8dfca';ctx.beginPath();ctx.arc(x,y,6.5,0,7);ctx.fill();ctx.fillStyle='rgba(20,30,40,.8)';ctx.beginPath();ctx.arc(x,y,4.8,0,7);ctx.fill();
+    if(play){ctx.fillStyle='#fff';ctx.fillRect(x-2.5+Math.sin(gt*9)*.6,y-1.5,2,2);ctx.fillRect(x+.5,y-.5,2,2);}
+  }else{ // 業務用
+    ctx.fillStyle='#2b2f36';rr(x-33,y-33,66,66,8);ctx.fill();ctx.strokeStyle='#4a505a';ctx.lineWidth=1;rr(x-31,y-31,62,62,7);ctx.stroke();
+    ctx.fillStyle='#1f5f8a';rr(x-26,y-26,52,52,4);ctx.fill();
+    for(let k=0;k<4;k++){ctx.save();ctx.translate(x,y);ctx.rotate(k*Math.PI/2);ctx.fillStyle='#0c0f12';ctx.fillRect(-6,-31.5,12,3);ctx.fillStyle=play?'#63ff9a':'#1d4a2d';ctx.fillRect(-5,-31,10,2);ctx.restore();}
+    if(play)(tb.manual&&p<.15?shuffle(tb,x,y,T.back):tilesRing(x,y,tb.manual?(p-.15)/.85:p,T.back));
+    ctx.fillStyle='#15181d';rr(x-6,y-6,12,12,2);ctx.fill();const lc=['#ff5a5a','#5aff8a','#5ab0ff','#ffd35a'];
+    lc.forEach((c,i)=>{ctx.fillStyle=play&&Math.floor(gt*2)%4===i?c:'#333';ctx.fillRect(x-4+(i%2)*6,y-4+(i>>1)*6,2,2);});
+  }
+  if(play){ctx.strokeStyle='rgba(0,0,0,.35)';ctx.lineWidth=4;ctx.beginPath();ctx.arc(x,y,41,0,7);ctx.stroke();
+    ctx.strokeStyle='#ffd35a';ctx.lineWidth=3;ctx.beginPath();ctx.arc(x,y,41,-Math.PI/2,-Math.PI/2+Math.PI*2*p);ctx.stroke();}
+
+  drawDirt(tb,x,y);
+  if(tb.broken){ctx.fillStyle='rgba(0,0,0,.45)';rr(x-33,y-33,66,66,8);ctx.fill();
+    const on=Math.floor(gt*3)%2;ctx.fillStyle=on?'#ff4d4d':'#b82a2a';ctx.beginPath();ctx.arc(x,y,11,0,7);ctx.fill();label('!',x,y+.5,15,'#fff');
+    label(tb.repairing?'修理中':'故障',x,y+21,10,'#ffb0b0');}
+  if(tb.manual){ctx.fillStyle='#8a5a34';rr(x-48,y-41,32,11,5);ctx.fill();label('手積み中',x-32,y-35.5,7,'#fff');}
+  {const n=occ(tb),stt=tb.broken?'故障':tb.state==='play'?'対局中':n?`${n}/4`:'空席',col=tb.broken?'#b8182e':tb.state==='play'?'#7a4a12':'#23272f';
+    const w1=tag(`卓${tb.slot+1}`,x-44,y-60,'#1e7a57','#ffffff',7);tag(stt,x-44+w1/2+stt.length*3.5+6,y-60,col,'#ffffff',7);}
+  if(S.modes[tb.slot]==='set'){ctx.fillStyle='#ffd35a';rr(x+20,y-41,28,11,5);ctx.fill();label('セット',x+34,y-35.5,8,'#1b1206');}
+  if(tb.tap>0){ctx.strokeStyle=`rgba(255,255,255,${tb.tap})`;ctx.lineWidth=2;ctx.beginPath();ctx.arc(x,y,41+(1-tb.tap)*14,0,7);ctx.stroke();}
+}
+function drawPerson(e){
+  const bob=e.moving?Math.sin(gt*14+e.id)*1.2:0;
+  if(e.type==='pro'){ctx.save();ctx.globalAlpha=.35+.2*Math.sin(gt*4);ctx.fillStyle='#ffd35a';ctx.beginPath();ctx.arc(e.x,e.y+bob,15,0,7);ctx.fill();ctx.restore();}
+  ctx.save();ctx.translate(e.x,e.y+bob);ctx.rotate(e.dir);
+  ctx.fillStyle='rgba(0,0,0,.25)';ctx.beginPath();ctx.ellipse(1,1.5,6,10,0,0,7);ctx.fill();
+  const playing=e.table&&e.table.state==='play'&&e.state==='seated';
+  if(playing){ctx.fillStyle='#f0c8a0';const k=Math.sin(gt*6+e.id)>0.6?2:0;ctx.beginPath();ctx.arc(7+k,-5,2.3,0,7);ctx.arc(7,5,2.3,0,7);ctx.fill();}
+  ctx.fillStyle=e.body;ctx.beginPath();ctx.ellipse(0,0,5.5,9.5,0,0,7);ctx.fill();ctx.strokeStyle='rgba(20,14,10,.75)';ctx.lineWidth=1.6;ctx.stroke();
+  if(e.type==='staff'){ctx.fillStyle='#1c1c1c';ctx.fillRect(-2,-9,4,18);ctx.fillStyle='#b8182e';ctx.fillRect(3,-1.5,2,3);}
+  if(e.type==='hall'){ctx.fillStyle='#2f6b9a';ctx.fillRect(-1,-8,5,16);}
+  if(e.type==='boss'){ctx.fillStyle='#f4f4f4';ctx.beginPath();ctx.moveTo(5.5,-3);ctx.lineTo(1.5,0);ctx.lineTo(5.5,3);ctx.fill();ctx.fillStyle='#c8a04a';ctx.fillRect(3.5,-.8,2,1.6);}
+  if(e.type==='tech'){ctx.fillStyle='#3a3a3a';ctx.fillRect(-3,-9,2,18);}
+  if(e.state==='cleaning'){ctx.fillStyle='#7fc8e8';ctx.fillRect(6+Math.sin(gt*14)*3,-3,5,6);}
+  if(e.type==='tech'&&e.state==='repairing'){ctx.fillStyle='#b0b6bd';ctx.fillRect(7,-1.5+Math.sin(gt*18),6,3);}
+  if(e.ctype==='w'){ctx.fillStyle='#f4f4f4';ctx.beginPath();ctx.moveTo(5.5,-3);ctx.lineTo(1.5,0);ctx.lineTo(5.5,3);ctx.fill();ctx.fillStyle='#9a2a3a';ctx.fillRect(3.5,-.8,2,1.6);}
+  if(e.type==='pro'){ctx.fillStyle='#ffd35a';ctx.fillRect(2,-4,2,2);}
+  ctx.fillStyle=e.hair;ctx.beginPath();ctx.arc(0,0,5.4,0,7);ctx.fill();ctx.strokeStyle='rgba(20,14,10,.75)';ctx.lineWidth=1.4;ctx.stroke();
+  ctx.fillStyle='#f0c8a0';ctx.beginPath();ctx.arc(2.6,0,2.4,-1.3,1.3);ctx.fill();
+  ctx.restore();
+  if(e.carry&&e.carry.length&&e.state==='returning'){ctx.fillStyle='#c0c4c8';ctx.beginPath();ctx.arc(e.x+8,e.y-8,5,0,7);ctx.fill();ctx.fillStyle='rgba(255,255,255,.8)';ctx.beginPath();ctx.arc(e.x+8,e.y-8,2.5,0,7);ctx.fill();}
+  if(e.state==='deliver'&&e.job){ctx.fillStyle='#c0c4c8';ctx.beginPath();ctx.arc(e.x+8,e.y-8,5,0,7);ctx.fill();
+    ctx.font='9px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(e.job.icon||'🍺',e.x+8,e.y-8);}
+  if(e.type==='pro'&&e.state!=='leaving'){ctx.fillStyle='#ffd35a';rr(e.x-14,e.y-27,28,13,6);ctx.fill();label('プロ',e.x,e.y-20.5,9,'#1b1206');}
+  if(e.type==='tech'){ctx.font='bold 9px "Zen Kaku Gothic New",sans-serif';const w=ctx.measureText('修理業者').width+10;
+    ctx.fillStyle='rgba(224,122,31,.97)';rr(e.x-w/2,e.y+10,w,12,5);ctx.fill();label('修理業者',e.x,e.y+16.5,9,'#fff');}
+  if(e.type==='boss'){ctx.save();ctx.globalAlpha=.25+.15*Math.sin(gt*3);ctx.strokeStyle='#ffd35a';ctx.lineWidth=2;ctx.beginPath();ctx.arc(e.x,e.y+bob,13,0,7);ctx.stroke();ctx.restore();
+    ctx.font='bold 9px "Zen Kaku Gothic New",sans-serif';const bl=bossLabel(),w=ctx.measureText(bl).width+10;ctx.fillStyle='rgba(200,150,40,.97)';rr(e.x-w/2,e.y+10,w,12,5);ctx.fill();label(bl,e.x,e.y+16.5,9,'#1b1206');}
+  if(e.st&&(e.type==='staff'||e.type==='hall')){ctx.font='bold 9px "Zen Kaku Gothic New",sans-serif';const nm=e.st.name,w=ctx.measureText(nm).width+8;
+    const dy=(e.state==='idle'&&e.type==='staff'&&e.idx%2)?12:0; // 待機中は名札を2段に互い違いにして重ならないように
+    ctx.fillStyle=e.type==='hall'?'rgba(47,107,154,.95)':'rgba(30,122,87,.95)';rr(e.x-w/2,e.y+10+dy,w,12,5);ctx.fill();label(nm,e.x,e.y+16.5+dy,9,'#fff');
+    const r=Math.max(0,Math.min(1,(e.st.stam??stamMax(e.st))/stamMax(e.st))),bw=w-6;ctx.fillStyle='rgba(0,0,0,.45)';ctx.fillRect(e.x-bw/2,e.y+23+dy,bw,2.5);
+    ctx.fillStyle=r>.5?'#63d98a':r>.2?'#f0c040':'#ff5a5a';ctx.fillRect(e.x-bw/2,e.y+23+dy,bw*r,2.5);
+    if(e.state==='resting'){ctx.globalAlpha=.6+.4*Math.sin(gt*3);label('Zz',e.x+9,e.y-12,9,'#dfe8ff');ctx.globalAlpha=1;}}
+  if(e.reg!=null&&e.state!=='leaving'){ctx.font='9px "Zen Kaku Gothic New",sans-serif';const nm=REG[e.reg].name,w=ctx.measureText(nm).width+8;
+    ctx.fillStyle='rgba(224,80,106,.95)';rr(e.x-w/2,e.y+11,w,12,5);ctx.fill();label(nm,e.x,e.y+17.5,9,'#fff');}
+  const bub=e.bubbleT>0?e.bubble:((e.orders||[]).length&&e.state==='seated'?e.orders[0].icon:null);
+  if(bub){ctx.font='bold 10px "Zen Kaku Gothic New",sans-serif';const w=Math.max(22,ctx.measureText(bub).width+10);ctx.fillStyle='#fff';rr(e.x-w/2,e.y-30,w,15,6);ctx.fill();ctx.fillStyle='#333';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(bub,e.x,e.y-22);}
+}
+function draw(){
+  const k=shake>0?shake/.45:0,sx=(Math.random()-.5)*8*k,sy=(Math.random()-.5)*8*k;
+  const main=ctx;ctx=bctx;textQ.length=0;
+  ctx.setTransform(BS,0,0,BS,sx*BS,sy*BS);
+  ctx.clearRect(-10,-10,W+20,H+20);
+  drawFloor();
+  drawOutside();
+  for(let i=tables.length;i<SLOTS.length;i++)drawSlot(i);
+  tables.forEach(drawTable);
+  const hh=S.clock/60;if(hh>=17){const n=Math.min(1,(hh-17)/3);ctx.fillStyle=`rgba(${Math.round(255-225*n)},${Math.round(140-110*n)},${Math.round(60+30*n)},${.07+.09*n})`;ctx.fillRect(0,0,W,HI);}
+  peds.forEach(drawPerson);
+  ents.filter(e=>!e.moving).forEach(drawPerson);
+  ents.filter(e=>e.moving).forEach(drawPerson);
+  drawOutsideNight();drawStreetlamps();
+  floats.forEach(f=>{const a=1-f.t/1.4;ctx.globalAlpha=a;ctx.font=(f.small?'12px ':'15px ')+'"Dela Gothic One",sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    const yy=f.y-f.t*26;ctx.lineWidth=3;ctx.strokeStyle='rgba(0,0,0,.6)';ctx.strokeText(f.text,f.x,yy);ctx.fillStyle=f.c;ctx.fillText(f.text,f.x,yy);ctx.globalAlpha=1;});
+  parts.forEach(p=>{ctx.globalAlpha=Math.max(0,p.life/p.max);ctx.fillStyle=p.c;ctx.fillRect(p.x-p.s/2,p.y-p.s/2,p.s,p.s);});ctx.globalAlpha=1;
+  if(proOn()){ctx.fillStyle='rgba(255,211,90,.95)';rr(W/2-62,134,124,18,9);ctx.fill();label('プロ来店中 客足2倍',W/2,143.5,11,'#1b1206');}
+  if(Date.now()<(S.boostUntil||0)){const yb=proOn()?156:134;ctx.fillStyle='rgba(255,120,150,.95)';rr(W/2-62,yb,124,18,9);ctx.fill();label('開店記念 客足2倍',W/2,yb+9.5,11,'#2a0710');}
+  ctx=main;ctx.setTransform(1,0,0,1,0,0);ctx.imageSmoothingEnabled=false;ctx.clearRect(0,0,cv.width,cv.height);ctx.drawImage(buf,0,0,cv.width,cv.height);
+  ctx.setTransform(dpr*scale,0,0,dpr*scale,0,0);replayText();
+}
+const bossFree=()=>{const b=ents.find(e=>e.type==='boss');return b&&(b.state==='idle'||b.state==='returning')?b:null;};
+function bossCmd(x,y){const b=ents.find(e=>e.type==='boss');if(!b)return false;
+  // 1) 注文を待っているお客さん → 店長が用意して運ぶ
+  const c=ents.find(e=>e.type==='cust'&&e.state==='seated'&&(e.orders||[]).length&&Math.hypot(e.x-x,e.y-y)<15);
+  if(c){const o=c.orders.find(o=>orders.includes(o));if(!o){toast('もうスタッフが用意しています');return true;}
+    if(!bossFree()){toast('店長はいま手が離せません');return true;}orders.splice(orders.indexOf(o),1);b.path=[];b.moving=false;b.job=o;b.state='idle';toast('店長が用意して運びます');return true;}
+  // 2) 器が残ったサイドテーブル → 店長が卓ごと片づける
+  for(const tb of tables)for(let k=0;k<4;k++){const q=sidePos(tb,k);if(Math.hypot(q.x-x,q.y-y)<11&&tb.seats[k]===null&&tb.side[k].length){
+    if(tb.busyBy){toast('もうスタッフが片づけに向かっています');return true;}
+    if(!bossFree()){toast('店長はいま手が離せません');return true;}
+    tb.busyBy=b.id;b.bus={tb,k};b.state='toBus';const p=seatPos(tb,k);route(b,q.x,p.corr,p.corr);toast('店長が片づけます');return true;}}
+  // 3) 卓 → 3人待っていれば店長が入って打つ、汚れていれば掃除する
+  for(const tb of tables){const s=SLOTS[tb.slot];if(Math.hypot(x-s.x,y-s.y)>=38||tb.broken||tb.state==='play')continue;
+    const oc=tb.seats.map(byId).filter(Boolean),k=freeIdx(tb);
+    if(S.modes[tb.slot]==='free'&&k>=0&&oc.filter(e=>!isCrew(e)&&e.state==='seated').length>=3&&!oc.some(isCrew)){
+      if(!bossFree()){toast('店長はいま手が離せません');return true;}sendToSeat(b,tb,k);toast('店長が入って打ちます');return true;}
+    if(tb.dirt>=.2&&!tb.cleaner){if(!bossFree()){toast('店長はいま手が離せません');return true;}
+      tb.cleaner=b.id;b.cleanTb=tb;b.state='toClean';route(b,s.x-22,s.y-50,s.y-50);toast('店長が掃除します');return true;}}
+  return false;}
+cv.addEventListener('pointerdown',ev=>{const r=cv.getBoundingClientRect(),x=(ev.clientX-r.left)/scale,y=(ev.clientY-r.top)/scale;
+  if(bossCmd(x,y))return;
+  tables.forEach(tb=>{const s=SLOTS[tb.slot];if(Math.hypot(x-s.x,y-s.y)>=38)return;
+    if(tb.broken){repairMenu(tb);return;}
+    if(tb.state==='play'){tb.t+=1;tb.tap=1;burst(s.x,s.y,6,['#ffffff','#ffd35a']);}
+    else if(tb.manual)repairMenu(tb);});});
+
+// ---------- UI ----------
+const no=()=>null;
+const ROW={
+  addTable:{name:'卓を増やす',lv:()=>tables.length+'卓',cost:()=>Math.round(500*Math.pow(2.6,tables.length-2)),max:()=>tables.length>=ST().max,lock:no,rerender:1,
+    desc:()=>tables.length>=ST().max?`この店は${ST().max}卓で満卓です`:`手積み卓を追加。いま ${tables.length}/${ST().max}卓`,buy(){S.tiers.push(0);S.modes.push('free');addTable();toast('卓を増やしました');}},
+  fee:{name:'場代',lv:()=>'Lv'+S.fee,cost:()=>Math.round(80*Math.pow(1.8,S.fee)),max:()=>false,lock:no,
+    desc:()=>`フリー1人 ¥${fmt(40*(1+0.25*S.fee)*ST().fee)}/半荘、セット ¥${fmt(500*(1+0.25*S.fee)*ST().fee)}/時間から`,buy(){S.fee++;}},
+  wait:{name:'待合室',lv:()=>S.wait?'開放済み':'',cost:()=>800,max:()=>!!S.wait,lock:no,
+    desc:()=>'満席のときにお客さんが4人まで待てます',buy(){S.wait=1;toast('待合室を開放しました');}},
+  mag:{name:'雑誌',lv:()=>S.mag?'設置済み':'',cost:()=>300,max:()=>!!S.mag,lock:no,
+    desc:()=>'待合室に置きます。待てる時間 +10秒',buy(){S.mag=1;}},
+  manga:{name:'漫画',lv:()=>S.manga?'設置済み':'',cost:()=>700,max:()=>!!S.manga,lock:no,
+    desc:()=>'待合室で待てる時間 +20秒',buy(){S.manga=1;}},
+  tv:{name:'テレビ',lv:()=>S.tv?'設置済み':'',cost:()=>1500,max:()=>!!S.tv,lock:no,
+    desc:()=>'待合室で待てる時間 +20秒',buy(){S.tv=1;}},
+  drink:{name:'ドリンク',lv:()=>S.drink?'Lv'+S.drink:'',cost:()=>Math.round(250*Math.pow(1.9,S.drink)),max:()=>false,lock:no,
+    desc:()=>S.drink?`1杯 ¥${fmt(drinkPrice())}。半荘中に注文が入ります`:'半荘中にドリンクの注文が入るようになります',buy(){S.drink++;}},
+  food:{name:'フード',lv:()=>S.food?'Lv'+S.food:'',cost:()=>Math.round(1500*Math.pow(1.9,S.food)),max:()=>false,lock:no,
+    desc:()=>S.food?`1品 ¥${fmt(foodPrice())}。厨房で作って運びます`:'厨房を開けて、フードの注文を受けます',buy(){if(!S.food)toast('厨房を開けました');S.food++;}},
+  mgr:{name:'店長代行',lv:()=>`${OFFCAP[S.mgr||0]}時間`,cost:()=>Math.round(4000*Math.pow(8,S.mgr||0)),max:()=>(S.mgr||0)>=OFFCAP.length-1,lock:no,
+    desc:()=>(S.mgr||0)>=OFFCAP.length-1?`留守中も最大${OFFCAP[OFFCAP.length-1]}時間分営業します`:`留守中に営業できる時間を${OFFCAP[S.mgr||0]}時間から${OFFCAP[(S.mgr||0)+1]}時間に延ばします`,buy(){S.mgr=(S.mgr||0)+1;}},
+  broom:{name:'掃除用具',lv:()=>S.broom?'導入済み':'',cost:()=>400,max:()=>!!S.broom,lock:no,
+    desc:()=>'立ち番のメンバーが卓を半分の時間で掃除します',buy(){S.broom=1;}},
+  maint:{name:'保守契約',lv:()=>S.maint?'契約中':'',cost:()=>3000,max:()=>!!S.maint,lock:no,
+    desc:()=>'全自動卓の故障が半分に減ります',buy(){S.maint=1;toast('保守契約を結びました');}},
+  member:{name:'メンバーを採用',lv:()=>S.members.length+'/'+memberCap()+'人',cost:()=>0,max:()=>S.members.length>=memberCap(),lock:no,pickFirst:'member',
+    desc:()=>`1卓に1人まで入って打ち、手が空いたら提供や片づけ、掃除をします(この店は${memberCap()}人まで)`,buy(){}},
+  hall:{name:'ホールスタッフを採用',lv:()=>S.hall?'1/1人':'0/1人',cost:()=>0,max:()=>!!S.hall,lock:no,pickFirst:'hall',
+    desc:()=>'麻雀は打たず、提供に専念します。メンバーが卓に入っていても注文を回せます(1人)',buy(){}}
+};
+function tableRow(i){return{name:`${i+1}番卓`,lv:()=>TIERS[S.tiers[i]].short,
+  alt:{text:()=>tables[i].broken||tables[i].manual?'修理':S.modes[i]==='set'?'セット':'フリー',cls:()=>tables[i].broken||tables[i].manual?'alt':S.modes[i]==='set'?'alt set':'alt',
+    click(){if(tables[i].broken||tables[i].manual){repairMenu(tables[i]);return;}const tb=tables[i];if(tb.state==='play'||occ(tb)>0){toast('卓が空いたら切り替えられます');return;}S.modes[i]=S.modes[i]==='set'?'free':'set';save();
+      toast(`${i+1}番卓を${S.modes[i]==='set'?'セット卓(4人組の時間貸し)':'フリー卓(1人客を組み合わせ)'}にしました`);}},cost:()=>upCost(i,S.tiers[i]),max:()=>S.tiers[i]>=2,lock:no,
+  desc:()=>{const t=S.tiers[i];if(tables[i].broken)return t<2?'故障中。入れ替えるか、修理ボタンから対応を選べます':'故障中。修理ボタンから対応を選べます';if(tables[i].manual)return'全自動が止まり、手積みで営業中';if(t>=2)return`${TIERS[2].name}。半荘${TIERS[2].dur}秒、場代×${TIERS[2].mult}`;const n=TIERS[t+1];return`${n.name}へ。半荘${TIERS[t].dur}→${n.dur}秒、場代×${n.mult}`;},
+  buy(){S.tiers[i]++;tables[i].broken=false;tables[i].manual=false;tables[i].repairing=false;const s=SLOTS[i];burst(s.x,s.y,24,['#ffd35a','#fff']);toast(`${i+1}番卓を${TIERS[S.tiers[i]].name}に入れ替えました`);}};}
+function decoRow(k){const d=DECO[k];return{name:d.name,lv:()=>S.deco[k]?`${d.grades[S.deco[k]-1]} (${S.deco[k]}/${d.max})`:'',
+  cost:()=>Math.round(d.c*Math.pow(d.g,S.deco[k])),max:()=>S.deco[k]>=d.max,lock:no,
+  desc:()=>S.deco[k]>=d.max?`最高グレード。来店ペース +${Math.round(d.b*100*d.max)}%`:`${S.deco[k]?'次は':''}${d.grades[S.deco[k]]}。来店ペース +${Math.round(d.b*100*(S.deco[k]+1))}%${S.deco[k]?`(いま +${Math.round(d.b*100*S.deco[k])}%)`:''}`,
+  buy(){S.deco[k]++;toast(`${d.name}を「${d.grades[S.deco[k]-1]}」にしました`);}};}
+function tabRows(){
+  if(tab==='table'){const r=[ROW.addTable,ROW.fee];tables.forEach((_,i)=>r.push(tableRow(i)));return r;}
+  if(tab==='fac')return[ROW.mgr,ROW.mag,ROW.manga,ROW.tv,ROW.drink,ROW.food,ROW.broom,ROW.maint];
+  if(tab==='deco')return Object.keys(DECO).map(decoRow);
+  if(tab==='staff')return[ROW.member,ROW.hall];
+  if(tab==='reg')return REG.map((r,i)=>({reg:i}));
+  return[];
+}
+let tab='table',rows=[];
+function renderTab(){
+  const L=document.getElementById('list');L.innerHTML='';rows=[];
+  if(tab==='shop'){L.innerHTML=`<div class="stat"><span>ほかの店からの収入</span><b>¥${fmt(bgIncome()*60)}/分</b></div><div class="stat"><span>累計売上</span><b id="st-total"></b></div>
+    <div class="stat"><span>営業日数</span><b id="st-day"></b></div><div class="stat"><span>半荘数</span><b id="st-games"></b></div><div class="stat"><span>役満</span><b id="st-yaku"></b></div>
+    <div class="stat"><span>提供したドリンク・フード</span><b id="st-served"></b></div>
+    <div class="stat"><span>掃除した回数</span><b id="st-clean"></b></div><div class="stat"><span>修理した回数</span><b id="st-rep"></b></div><div class="stat"><span>満席で帰ったお客さん</span><b id="st-lost"></b></div>
+    <div class="stat"><span>来店ペース(内装)</span><b id="st-pace"></b></div>
+    <div class="note">汚れた卓はお客さんに避けられ、評判も下がります。全自動卓は時々故障するので、店内の卓をタップして対応してください。お店を離れている間も売上が貯まります(店長代行で最大12時間分まで延ばせます)。プレイ中の卓をタップすると、半荘が少し早く進みます。</div>
+    <div class="row"><div><div class="nm">データをリセット</div><div class="ds">最初からやり直します</div></div><button class="buy" id="resetBtn">リセット</button></div>`;
+    let armed=false;document.getElementById('resetBtn').onclick=e=>{if(!armed){armed=true;e.target.textContent='もう一度押す';setTimeout(()=>{armed=false;e.target.textContent='リセット';},3000);return;}
+      try{localStorage.removeItem(KEY);}catch(_){}S=fresh();REG=REGS[0];applyLayout();initWorld();renderTab();playScene('prologue',()=>openMap('start'));toast('リセットしました');};
+    refresh();return;}
+  if(tab==='staff'){{const d=document.createElement('div');d.className='row';L.appendChild(d);
+      d.innerHTML=`<div><div class="nm">${esc(bossLabel())}<small>あなた</small><small class="sst"></small></div><div class="ds">手が空いていればスタッフと同じ仕事を自動でこなします。注文、器の残ったサイドテーブル、汚れた卓、3人待っている卓をタップすると、その仕事を優先します。スタミナはありません</div><div class="stw">${statHTML(S.boss,1)}</div></div><div class="btns"><button class="alt tr" type="button">研修</button><button class="alt nmb" type="button">名前</button></div>`;
+      d.querySelector('.tr').onclick=()=>training(S.boss);d.querySelector('.nmb').onclick=()=>askBossName();rows.push({crew:{m:S.boss,role:'boss'},sst:d.querySelector('.sst'),stw:d.querySelector('.stw'),dm:{set textContent(v){}},armed:false,boss:1});}
+    [ROW.member,ROW.hall].forEach(u=>addRow(L,u));
+    const crew=S.members.map((m,i)=>({m,role:'member',i})).concat(S.hallStaff&&S.hall?[{m:S.hallStaff,role:'hall'}]:[]);
+    crew.forEach(c=>{const d=document.createElement('div');d.className='row';L.appendChild(d);
+      d.innerHTML=`<div><div class="nm">${c.m.name}<small>${c.role==='hall'?'ホールスタッフ':'メンバー'}</small><small class="sst"></small></div><div class="stw">${statHTML(c.m,1)}</div></div><div class="btns"><button class="alt tr" type="button">研修</button><button class="alt dm" type="button">辞めてもらう</button></div>`;
+      d.querySelector('.tr').onclick=()=>training(c.m);
+      const b=d.querySelector('.dm'),row={crew:c,sst:d.querySelector('.sst'),stw:d.querySelector('.stw'),dm:b,armed:false};
+      b.onclick=()=>{
+        if(c.m.quitting){c.m.quitting=false;toast(c.m.name+'さんの退職予約を取り消しました');save();refresh();return;}
+        if(!row.armed){row.armed=true;refresh();setTimeout(()=>{row.armed=false;refresh();},3000);return;}
+        row.armed=false;dismiss(c);};
+      rows.push(row);});
+    refresh();return;}
+  if(tab==='reg'){REG.forEach((r,i)=>{const d=document.createElement('div');d.className='row';L.appendChild(d);
+      rows.push({reg:i,el:d});});refresh();return;}
+  tabRows().forEach(u=>addRow(L,u));
+  refresh();
+}
+function addRow(L,u){{const d=document.createElement('div');d.className='row'+(u.alt?' two':'');
+    d.innerHTML=`<div><div class="nm">${u.name}<small></small></div><div class="ds"></div></div><button class="buy" type="button"></button>`;
+    if(u.alt){const ab=document.createElement('button');ab.type='button';ab.onclick=()=>{u.alt.click();refresh();};d.insertBefore(ab,d.querySelector('.buy'));u._alt=ab;}
+    const btn=d.querySelector('.buy');btn.onclick=()=>{if(u.max()||u.lock())return;if(u.pickFirst){interview(u.pickFirst);return;}const c=pr(u.cost());if(S.money<c)return;S.money-=c;u.buy();save();if(u.rerender)renderTab();else refresh();};
+    L.appendChild(d);rows.push({u,lv:d.querySelector('small'),ds:d.querySelector('.ds'),btn});}}
+function dots(m,k){let h='';for(let i=0;i<5;i++)h+=i<m[k]?'●':i<capOf(m,k)?'○':'<span class="lk">○</span>';return h;}
+function statHTML(m,xp){return `<div class="stats">${STATS.map(([k,l])=>`<span>${l}<i>${dots(m,k)}</i>${xp&&m[k]<capOf(m,k)?`<span class="xp"><b style="width:${Math.round(100*((m.xp&&m.xp[k])||0)/xpNeed(m[k]))}%"></b></span>`:''}</span>`).join('')}</div>`;}
+function training(m){
+  mcard.innerHTML=`<h2>${m===S.boss?esc(bossLabel()):esc(m.name)+'さん'}の研修</h2><p>お金を払って、ステータスを1つ上げます。白丸までが伸びしろで、薄い丸は上限の外です。</p>
+    ${STATS.map(([k,l])=>`<button class="cand" type="button" data-k="${k}" ${m[k]>=capOf(m,k)?'disabled':''}><b>${l}</b> <i class="dots">${dots(m,k)}</i><span class="tc">${m[k]>=capOf(m,k)?'上限':'¥'+fmt(trainCost(m,k))}</span></button>`).join('')}
+    <button class="mbtn sec" id="trX">閉じる</button>`;
+  modal.classList.add('show');
+  mcard.querySelectorAll('.cand').forEach(b=>b.onclick=()=>{const k=b.dataset.k;if(m[k]>=capOf(m,k))return;const c=trainCost(m,k);
+    if(S.money<c){toast('お金が足りません');return;}S.money-=c;m[k]++;if(m.xp)m.xp[k]=0;
+    const e=ents.find(x=>x.st===m);if(e){burst(e.x,e.y,16,['#7fffb0','#ffffff']);floats.push({x:e.x,y:e.y-18,text:STLABEL[k]+'UP!',t:0,c:'#7fffb0',small:1});}
+    toast(`${m.name}さんの${STLABEL[k]}が${m[k]}に上がりました`);save();training(m);});
+  document.getElementById('trX').onclick=()=>{modal.classList.remove('show');renderTab();};
+}
+function staffState(e){if(!e)return'';const st=e.state;if(st==='seated'||st==='toSeat')return'本走中';if(st==='prep'||st==='cook'||st==='toKitchen')return'用意中';
+  if(st==='deliver')return'提供中';if(st==='toClean'||st==='cleaning')return'掃除中';if(st==='toBus'||st==='busing')return'片づけ中';if(st==='toRest'||st==='resting')return'休憩中';return'待機中';}
+function interview(role){
+  if(!S.cands[role])S.cands[role]=genCands();
+  const cs=S.cands[role];
+  mcard.innerHTML=`<h2>${role==='hall'?'ホールスタッフ':'メンバー'}の面接</h2><p>採用費は候補ごとに違います。今のステータスと伸びしろが大きいほど高くなります。白丸までが伸びしろで、薄い丸は上限の外です。</p>
+    ${cs.map((c,i)=>{const p=hireCost(c,role);return `<button class="cand" type="button" data-i="${i}" ${S.money<p?'disabled':''}><b>${c.name}</b><span class="tc">¥${fmt(p)}</span>${statHTML(c)}</button>`;}).join('')}
+    <p style="margin:10px 0 0">所持金 ¥${fmt(S.money)}</p>
+    <button class="mbtn pri" id="ivAd">広告を見て候補を入れ替える</button><button class="mbtn sec" id="ivX">閉じる</button>`;
+  modal.classList.add('show');
+  mcard.querySelectorAll('.cand').forEach(b=>b.onclick=()=>{const c=cs[+b.dataset.i],cost=hireCost(c,role);if(S.money<cost){toast('お金が足りません');return;}
+    S.money-=cost;S.cands[role]=null;
+    if(role==='hall'){S.hall=1;S.hallStaff=c;mkHall();}else{S.members.push(c);S.staff=S.members.length;mkStaff(S.members.length-1);}
+    modal.classList.remove('show');toast(c.name+'さんが入店しました');save();renderTab();});
+  document.getElementById('ivX').onclick=()=>modal.classList.remove('show');
+  document.getElementById('ivAd').onclick=()=>{modal.classList.remove('show');playAd(()=>{S.cands[role]=genCands();save();interview(role);});};
+}
+function dismiss(c){
+  const e=ents.find(x=>x.st===c.m);
+  if(e&&e.state!=='idle'){c.m.quitting=true;releaseIfWaiting(e);toast(c.m.name+'さんは今の仕事が終わったら退職します');save();refresh();return;}
+  doDismiss(c);
+}
+// 待ち状態の卓に座っている/向かっているだけなら、すぐ抜けて帰す
+function releaseIfWaiting(e){if((e.state==='seated'||e.state==='toSeat')&&e.table&&e.table.state!=='play')goHome(e);}
+function doDismiss(c){
+  const e=ents.find(x=>x.st===c.m);
+  if(e)ents=ents.filter(x=>x!==e);
+  if(c.role==='hall'){S.hall=0;S.hallStaff=null;}
+  else{S.members.splice(S.members.indexOf(c.m),1);S.staff=S.members.length;
+    ents.filter(x=>x.type==='staff').forEach(x=>{const i=S.members.indexOf(x.st);if(i!==x.idx){x.idx=i;if(x.state==='idle')goHome(x);}});}
+  toast(c.m.name+'さんが退職しました');save();renderTab();
+}
+function refresh(){
+  rows.forEach(r=>{
+    if(r.crew){const e=ents.find(x=>x.st===r.crew.m);const m=r.crew.m;r.sst.textContent=r.boss?staffState(e):(m.quitting?'退職予定 ':'')+staffState(e)+`  体力 ${Math.ceil(m.stam??stamMax(m))}/${stamMax(m)}`;
+      r.dm.textContent=r.crew.m.quitting?'予約を取り消す':r.armed?(e&&e.state!=='idle'?'もう一度押すと予約':'もう一度押す'):'辞めてもらう';const h=statHTML(r.crew.m,1);if(r.stw._h!==h){r.stw.innerHTML=h;r.stw._h=h;}return;}
+    if(r.reg!=null){const R=REG[r.reg],v=S.regs[r.reg],open=S.visits>=R.need;
+      const html=open?`<div><div class="nm">${R.name}<small>${CT[R.type].name}</small></div><div class="ds">${R.like}</div><div class="hearts">${'❤'.repeat(hearts(v))}${'♡'.repeat(5-hearts(v))}</div></div><div class="visits">${v}半荘</div>`
+        :`<div><div class="nm">???</div><div class="ds">来店客があと${R.need-S.visits}人で来るようになります</div></div><div class="visits"></div>`;
+      if(r.el._h!==html){r.el.innerHTML=html;r.el._h=html;}return;}
+    if(r.u._alt){r.u._alt.textContent=r.u.alt.text();r.u._alt.className=r.u.alt.cls();}
+    r.lv.textContent=r.u.lv();const lk=r.u.lock();r.ds.textContent=lk||r.u.desc();
+    if(r.u.max()){r.btn.textContent='済み';r.btn.disabled=true;}else if(lk){r.btn.textContent='未解放';r.btn.disabled=true;}
+    else if(r.u.pickFirst){r.btn.textContent='面接する';r.btn.disabled=false;}
+    else{const c=pr(r.u.cost());r.btn.textContent='¥'+fmt(c);r.btn.disabled=S.money<c;}});
+  if(tab==='shop'){const q=id=>document.getElementById(id);if(q('st-total')){q('st-total').textContent='¥'+fmt(S.total);q('st-day').textContent=S.day+'日目';q('st-clean').textContent=fmt(S.cleans)+'回';q('st-rep').textContent=fmt(S.repairs)+'回';q('st-games').textContent=fmt(S.games);
+    q('st-yaku').textContent=fmt(S.yaku)+'回';q('st-served').textContent=fmt(S.served)+'品';q('st-lost').textContent=fmt(S.lost)+'人';q('st-pace').textContent='+'+Math.round(decoBonus()*100)+'%';}}
+  const now=Date.now();incomeLog=incomeLog.filter(x=>now-x.t<60000);const pm=incomeLog.reduce((a,b)=>a+b.v,0);
+  document.getElementById('rate').textContent=`¥${fmt(pm)}/分${bgIncome()>0?` +${fmt(bgIncome()*60)}`:''}  ★${S.rep.toFixed(1)}`;
+  document.getElementById('rate').title=`売上 ¥${fmt(pm)}/分、ほかの店から ¥${fmt(bgIncome()*60)}/分、評判 ★${S.rep.toFixed(1)}`;
+  drawGoal();
+  const cm=Math.floor(Math.min(S.clock,1439.99));document.getElementById('shopLine').textContent=
+    `${shopName()}  ${S.day}日目 ${S.closing===2?'営業終了':S.closing?'閉店作業中':String(Math.floor(cm/60)).padStart(2,'0')+':'+String(cm%60).padStart(2,'0')}`;
+  if(playTime>60){S.rate=pm/60;S.bestRate=Math.max(S.bestRate||0,S.rate);}
+  const rb=document.getElementById('rushBtn');
+  if(proOn()){const r=Math.ceil((S.proUntil-now)/1000);rb.textContent=`プロ来店中 ${Math.floor(r/60)}:${String(r%60).padStart(2,'0')}`;rb.title='麻雀プロが来店中';rb.classList.add('on');}
+  else{rb.textContent='▶ プロを呼ぶ';rb.title='広告を見て麻雀プロを呼ぶ(2分間 客足2倍)';rb.classList.remove('on');}
+}
+const sheetEl=document.getElementById('sheet'),sheetBtn=document.getElementById('sheetToggle');
+function setSheet(open){sheetEl.classList.toggle('collapsed',!open);sheetBtn.setAttribute('aria-expanded',open);}
+if(window.innerHeight<720)setSheet(false); // 画面の低いスマホでは店内を広く見せる
+sheetBtn.onclick=()=>setSheet(sheetEl.classList.contains('collapsed'));
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
+  if(tab===b.dataset.tab){setSheet(sheetEl.classList.contains('collapsed'));return;} // 選択中のタブをもう一度押すと開閉
+  tab=b.dataset.tab;setSheet(true);document.querySelectorAll('nav button').forEach(x=>x.setAttribute('aria-selected',x===b));renderTab();});
+document.getElementById('rushBtn').onclick=()=>{if(proOn())return;playAd(()=>{S.proUntil=Date.now()+120000;if(!ents.some(e=>e.type==='pro'))mkPro();spawnT=0;toast('麻雀プロが来店!2分間、客足が2倍になります');save();});};
+
+let toastTimer;function toast(m){const t=document.getElementById('toast');t.textContent=m;t.style.opacity=1;clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.style.opacity=0,1800);}
+const modal=document.getElementById('modal'),mcard=document.getElementById('mcard');
+function playAd(cb){let n=3;modal.classList.add('show');
+  const dr=()=>{mcard.innerHTML=`<h2>広告を再生しています</h2><p>プロトタイプ用のダミー広告です。実装時はAdMobのリワード広告に置き換えます。</p><div class="count">${n}</div>`;};
+  dr();const iv=setInterval(()=>{n--;if(n<=0){clearInterval(iv);modal.classList.remove('show');cb();}else dr();},1000);}
+function offline(since){
+  const el=Math.min((Date.now()-since)/1000,OFFCAP[S.mgr||0]*3600);if(el<60||(S.rate<=0&&bgIncome()<=0))return;
+  const amt=Math.round(S.rate*el*OFF_EFF+bgIncome()*el);if(amt<1)return;
+  const m=Math.floor(el/60),h=Math.floor(m/60);
+  mcard.innerHTML=`<h2>留守の間の売上</h2><p>${h?h+'時間':''}${m%60}分、スタッフがお店を回していました。</p><div class="mv">¥${fmt(amt)}</div>
+    <button class="mbtn pri" id="ofAd">広告を見て2倍受け取る</button><button class="mbtn sec" id="ofOk">受け取る</button>`;
+  modal.classList.add('show');
+  document.getElementById('ofOk').onclick=()=>{modal.classList.remove('show');earn(amt,AISLE,HI/2);save();};
+  document.getElementById('ofAd').onclick=()=>{modal.classList.remove('show');playAd(()=>{earn(amt*2,AISLE,HI/2);save();});};
+}
+let hiddenAt=0;
+document.addEventListener('visibilitychange',()=>{if(document.hidden){hiddenAt=Date.now();save();}else if(hiddenAt){offline(hiddenAt);hiddenAt=0;}});
+window.addEventListener('pagehide',save);
+window.addEventListener('resize',fit);
+if(window.ResizeObserver)new ResizeObserver(()=>fit()).observe(document.getElementById('stage'));
+
+// ---------- 営業時間バー(10:00開店〜24:00閉店) ----------
+const tbPast=document.getElementById('tbPast'),tbMark=document.getElementById('tbMark'),tbTrack=document.querySelector('.tb-track');
+function drawTimebar(){const p=Math.max(0,Math.min(1,(S.clock-600)/840));const pc=(p*100).toFixed(2)+'%';
+  tbPast.style.width=pc;tbMark.style.left=pc;
+  const left=Math.max(0,1440-S.clock),lab=S.closing===2?'本日の営業は終了しました':S.closing?'閉店作業中':`閉店まであと${Math.floor(left/60)}時間${Math.floor(left%60)}分`;
+  if(tbTrack._l!==lab){tbTrack.setAttribute('aria-label',lab);tbTrack.title=lab;tbTrack._l=lab;}}
+// ---------- 全国マップ ----------
+const LAND={
+  hokkaido:[[140.0,41.45],[140.5,42.2],[139.9,42.6],[140.4,43.2],[141.4,43.3],[141.7,44.3],[141.9,45.45],[142.9,44.8],[143.9,44.2],[145.3,44.3],[145.1,43.6],[145.8,43.35],[144.5,42.95],[143.3,42.0],[142.2,42.45],[141.0,42.35],[140.4,41.9]],
+  honshu:[[130.9,33.95],[131.5,34.6],[132.5,35.3],[133.5,35.5],[134.5,35.6],[135.4,35.55],[136.0,35.8],[136.7,36.8],[136.9,37.4],[137.3,36.8],[138.2,37.1],[138.9,37.85],[139.5,38.6],[139.9,39.9],[140.0,40.6],[140.3,41.2],[141.0,41.2],[141.45,41.45],[141.4,40.6],[141.95,39.7],[141.6,38.4],[141.0,38.2],[141.0,37.2],[140.75,36.4],[140.85,35.7],[140.35,35.1],[139.85,34.95],[139.8,35.5],[139.2,35.25],[138.85,34.6],[138.2,34.6],[137.3,34.65],[136.85,34.3],[136.3,34.1],[135.8,33.45],[135.2,33.75],[135.1,34.25],[135.35,34.65],[134.7,34.75],[133.9,34.5],[133.0,34.3],[132.3,34.2],[131.4,34.0]],
+  shikoku:[[132.45,33.55],[132.7,34.0],[133.4,34.2],[134.2,34.35],[134.65,34.2],[134.75,33.8],[134.2,33.25],[133.6,33.45],[133.0,32.75],[132.5,32.9]],
+  kyushu:[[129.8,33.5],[130.9,33.9],[131.6,33.6],[131.85,33.2],[131.9,32.4],[131.4,31.4],[130.7,31.0],[130.2,31.3],[130.3,32.1],[129.8,32.7],[129.6,33.2]]
+};
+const proj=([lon,lat])=>[(lon-128)*20,(46-lat)*24];
+let mapMode=null,mapSel=0;
+function stageState(i){if(!S.started)return i===0?'next':'locked';if(i<S.shops.length)return'open';
+  if(i===S.shops.length&&(i===0?!S.started:(isNewest()&&(goalMet()||S.cleared))))return'next';return'locked';}
+function openMap(mode){mapMode=mode;mapSel=mode==='view'?S.active:Math.min(S.shops.length,STAGES.length-1);if(mode==='start')mapSel=0;
+  document.getElementById('map').classList.add('show');document.getElementById('mapClose').style.display=mode==='start'?'none':'';
+  document.getElementById('mapSub').textContent=mode==='start'?'1号店を出す町を選んでください':mode==='open'?`${STAGES[S.shops.length].no}号店を出す街を選んでください`:'店をタップすると切り替えられます';
+  renderMap();}
+function closeMap(){document.getElementById('map').classList.remove('show');mapMode=null;}
+document.getElementById('mapClose').onclick=closeMap;
+document.getElementById('ooBtn').onclick=grandOpen;
+document.getElementById('mapOpen').onclick=()=>openMap('view');
+function renderMap(){const svg=document.getElementById('mapSvg');let h='';
+  h+=Object.values(LAND).map(pts=>`<path d="M${pts.map(p=>proj(p).map(v=>v.toFixed(1)).join(',')).join('L')}Z" fill="#efe7cf" stroke="#b7a982" stroke-width="1.5" stroke-linejoin="round"/>`).join('');
+  // 出店した店を結ぶ線
+  const op=STAGES.slice(0,S.shops.length).map(g=>proj(g.pos));
+  if(op.length>1)h+=`<polyline points="${op.map(p=>p.join(',')).join(' ')}" fill="none" stroke="#c0392b" stroke-width="2" stroke-dasharray="5 4" opacity=".7"/>`;
+  STAGES.forEach((g,i)=>{const [x,y]=proj(g.pos),st=stageState(i),sel=i===mapSel;
+    const col=st==='open'?(i===S.active?'#1e7a57':'#2f8f6a'):st==='next'?'#d98a12':'#8f969c';
+    h+=`<g class="pin" data-i="${i}" tabindex="0" role="button" aria-label="${g.no}号店 ${g.area}">`;
+    if(st==='next')h+=`<circle class="pulse" cx="${x}" cy="${y}" r="9" fill="none" stroke="#d98a12" stroke-width="3"/>`;
+    h+=`<circle class="ring" cx="${x}" cy="${y}" r="${sel?12:9}" fill="${col}" stroke="${sel?'#fff':'#1b1206'}" stroke-width="${sel?3:1.5}"/>`;
+    h+=`<text x="${x}" y="${y+4}" text-anchor="middle" font-size="10" font-weight="700" fill="#fff">${st==='locked'?'?':g.no}</text>`;
+    const lx=x+(g.pos[0]>137?-16:16),anc=g.pos[0]>137?'end':'start';
+    h+=`<text x="${lx}" y="${y-8}" text-anchor="${anc}" font-size="11" font-weight="700" fill="#1b2430" stroke="#f7f2e2" stroke-width="3" paint-order="stroke">${st==='locked'?'???':g.area}</text>`;
+    if(st!=='locked')h+=`<text x="${lx}" y="${y+6}" text-anchor="${anc}" font-size="9" fill="#34414f" stroke="#f7f2e2" stroke-width="2.5" paint-order="stroke">${st==='open'?(i===S.active?'表示中':'営業中'):'出店できます'}</text>`;
+    h+='</g>';});
+  svg.innerHTML=h;
+  svg.querySelectorAll('.pin').forEach(p=>{const f=()=>{mapSel=+p.dataset.i;renderMap();};p.onclick=f;p.onkeydown=ev=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();f();}};});
+  renderMapPanel();}
+function renderMapPanel(){const P=document.getElementById('mapPanel'),i=mapSel,g=STAGES[i],st=stageState(i);
+  const info=`<div class="mp-grid"><span>場所</span><b>${g.place}</b><span>最大卓数</span><b>${g.max}卓</b>${i?`<span>場代</span><b>1号店の${g.fee}倍</b><span>物価</span><b>1号店の${g.cost}倍</b>`:''}<span>目標</span><b>売上 ¥${fmt(g.goal.earn)}、評判 ★${g.goal.rep.toFixed(1)}</b>${g.open?`<span>出店費用</span><b>¥${fmt(g.open)}</b>`:''}</div>`;
+  let body='';
+  if(st==='open'){const sh=S.shops[i];body=`<h3>${g.no}号店 ${esc((i===S.active?S.shopName:S.shops[i].shopName)||g.area)}</h3><div class="mp-sub">${i===S.active?'いま表示している店です':'営業中。見ていない間は最高の売上ペースの1割が入ります'}</div>${info}`+
+      (i===S.active?`<button class="mbtn sec" id="mpGo">店に戻る</button>`:`<button class="mbtn pri" id="mpGo">この店へ移動する</button>`);}
+  else if(st==='next'){const short=S.money<g.open;
+    body=`<h3>${g.no}号店 ${g.area}</h3><div class="mp-sub">${i===0?'ここから雀荘経営が始まります':'新しい店に持っていけるのは所持金だけです。スタッフと常連は今の店に残ります'}</div>${info}`+
+      `<button class="mbtn pri" id="mpGo" ${short?'disabled':''}>${i===0?'ここで開業する':short?`あと ¥${fmt(g.open-S.money)} 貯めると出店できます`:'出店費用を払って出店する'}</button>`;}
+  else{const prev=STAGES[i-1];body=`<h3>${g.no}号店 ???</h3><div class="mp-sub">${prev?`${prev.no}号店(${prev.area})の目標を達成して出店すると、次の街が選べるようになります`:''}</div>`;}
+  P.innerHTML=body;const b=document.getElementById('mpGo');if(!b)return;
+  b.onclick=()=>{if(st==='open'){closeMap();if(i!==S.active)switchShop(i);}
+    else if(st==='next'){if(i===0){closeMap();askBossName(()=>{S.started=1;S.opened=0;save();prepareOpening();},true);return;document.getElementById('goal')._k=null;}
+      else if(S.money>=g.open){closeMap();newStore();}}};}
+// ---------- ストーリー「日本中に、ひだまりを」 ----------
+// 話し手: boss=店長 tanaka=田中さん letter=祖父の手紙 rival=雀王グループの若社長 pro=麻雀プロ staff=スタッフ narr=ナレーション
+const SPK={boss:()=>bossLabel(),tanaka:()=>'田中さん',letter:()=>'祖父の手紙',rival:()=>'雀王グループ 若社長',pro:()=>'御影ミコト(麻雀プロ)',staff:()=>(S.members[0]||{}).name||'スタッフ',narr:()=>''};
+const STORY={
+  prologue:[['narr','春。地方の小さな町に、一通の手紙が届いた。'],
+    ['letter','この手紙を読んでいるということは、店を頼めるということかな。'],
+    ['letter','商店街の2階の雀荘「ひだまり」。卓を囲めば、年も仕事も違う人どうしが、同じ時間を過ごせる。'],
+    ['letter','そういう場所を、いつか日本中に。……それが、じいちゃんの夢だ。'],
+    ['narr','祖父の店を継ぐ。そう決めて、あなたは町へ向かった。']],
+  ch0_intro:[['narr','久しぶりに開けた店は、ほこりをかぶっていた。'],
+    ['staff','掃除、終わりました! 卓もちゃんと動きます。'],
+    ['boss','ありがとう。……よし。じいちゃんの店を、もう一度開けよう。']],
+  ch0_open:[['tanaka','おや、明かりがついてると思ったら。あんたが{boss}かい。じいさんから、よく話を聞いてたよ。'],
+    ['tanaka','わしは田中。この店には40年通ってたんだ。また打てるなんて、嬉しいねえ。'],
+    ['tanaka','お客さんが3人そろえば、メンバーが4人目に入って卓が回る。まずは卓を増やして、場代を上げていくといい。'],
+    ['boss','はい! これから、よろしくお願いします。']],
+  drink_hint:[['tanaka','打ってると喉が渇くねえ。お茶の一杯でも出てくると、みんな長居するんだが。'],
+    ['narr','設備タブの「ドリンク」で、お客さんの注文を受けられるようになります。']],
+  first_yakuman:[['tanaka','役満だ! 店中が沸いてるよ。こういう日があるから、麻雀はやめられないねえ。']],
+  first_break:[['staff','店長、卓が止まっちゃいました!'],['boss','故障した卓をタップして、修理を呼ぼう。急ぐときは手積みでしのげる。']],
+  first_rest:[['staff','すみません、少し休憩室で休んできます……!'],['narr','スタッフは仕事のたびにスタミナを使い、0になると休憩します。人手に余裕を持たせましょう。']],
+  ch0_end:[['tanaka','昔の顔ぶれが、みんな戻ってきたねえ。じいさんも、きっと喜んでるよ。'],
+    ['boss','田中さんのおかげです。'],
+    ['tanaka','ところで、隣の街の駅前に「雀王グループ」って大きな店ができたらしい。若い連中は、みんなそっちへ行っちまうそうだ。'],
+    ['boss','……行ってみます。ひだまりを、次の街にも。'],
+    ['narr','全国マップから、2号店を出す街を選べるようになりました。']],
+  ch1_intro:[['rival','へえ。商店街の小さな雀荘が、駅前に進出? 雀王グループの隣に店を出すなんて、いい度胸だ。'],
+    ['rival','うちは卓もスタッフも最新鋭。名前も知らない客を、効率よく回すのが商売さ。'],
+    ['boss','うちは、お客さんの名前を覚える店にします。']],
+  pro_meet:[['pro','ここ、いいお店ね。駅前の大きな店より、ずっと落ち着く。'],
+    ['pro','私、麻雀プロの御影ミコト。近くで対局がある日は、寄らせてもらってもいい?'],
+    ['boss','ぜひ! お客さんも喜びます。'],
+    ['narr','画面右上の「プロを呼ぶ」で、ミコトさんが来店し、しばらく客足が2倍になります。']],
+  ch1_end:[['rival','……うちの客が、そっちに流れてる。設備はうちの方が上なのに、なぜだ?'],
+    ['boss','名前で呼ばれると、また来たくなるんだと思います。'],
+    ['rival','フン。福岡では、そうはいかないぞ。'],
+    ['narr','3号店を出す街を選べるようになりました。']],
+  ch2_intro:[['staff','福岡は、学生さんや若いお客さんが多いですね! 屋台帰りのお客さんも。'],
+    ['boss','店が大きくなる。みんなが自分で考えて動けるように、スタッフを育てていこう。'],
+    ['narr','スタッフは働くほど経験を積んで成長します。研修で伸ばすこともできます。']],
+  letter2:[['letter','店が増えると、目の届かない場所も増える。でも、任せられる仲間がいれば大丈夫だ。'],
+    ['letter','人を信じて任せることも、店長の大事な仕事だよ。']],
+  ch2_end:[['staff','店長! 今日は、私たちだけでお店を回せました!'],
+    ['boss','すごいよ。みんな、ありがとう。'],
+    ['rival','……大阪で待ってる。話がある。'],
+    ['narr','4号店を出す街を選べるようになりました。']],
+  ch3_intro:[['rival','単刀直入に言う。ひだまりを、チェーンごと雀王グループに売ってくれないか。悪い額じゃない。'],
+    ['narr','店長の頭に、田中さんや、各地の常連たちの顔が浮かんだ。'],
+    ['boss','お断りします。ひだまりは、みんなの帰ってくる場所なので。'],
+    ['rival','……そうか。なら東京で、その答えを見せてもらおう。']],
+  pro_visit:[['pro','どのお店にも、ちゃんと「いつもの人」がいるのね。'],['pro','それって、簡単そうで一番むずかしいことよ。']],
+  ch3_end:[['narr','1号店の田中さんから、電話がかかってきた。'],
+    ['tanaka','大阪も大繁盛だってねえ。次は東京かい。じいさんの夢まで、あと一歩だ。'],
+    ['narr','最後の街、東京を選べるようになりました。']],
+  ch4_intro:[['boss','新宿。じいちゃんが、一番店を出したがっていた街だ。'],
+    ['staff','卓が16台も! 忙しくなりますね。'],
+    ['rival','ここは雀王グループの本拠地だ。ひだまりのやり方が通用するか、見せてもらう。']],
+  letter3:[['letter','日本中にひだまりを、なんて大きな夢を書いたが……本当は、一つでよかったのかもしれない。'],
+    ['letter','誰かにとっての「帰ってくる場所」になれたなら。それで十分だ。']],
+  finale:[['rival','……今日、客として来てみた。気づいたら、隣の卓の知らない客と、笑って話していた。'],
+    ['rival','数字では測れないものがある。……ひだまりの勝ちだ。'],
+    ['tanaka','おーい、{boss}! みんなで来たよ!'],
+    ['narr','1号店の常連たち、各地の常連たち、スタッフ、そしてミコトさん。新宿の店に、みんながそろった。'],
+    ['boss','じいちゃん。日本中に、ひだまりができたよ。'],
+    ['narr','― 日本中に、ひだまりを ―  おしまい。'],
+    ['narr','ここからも、店の経営はずっと続きます。']]
+};
+// ドット絵の顔アイコン(16×16)
+const FACES={};
+function makeFace(k){const c=document.createElement('canvas');c.width=c.height=16;const g=c.getContext('2d');if(!g)return'';
+  const P=(x,y,w,h,col)=>{g.fillStyle=col;g.fillRect(x,y,w,h);};
+  const bg={boss:'#e9dcc0',tanaka:'#dfe7d6',rival:'#d9dde8',pro:'#f0dbe2',staff:'#dbe9e6',letter:'#f3ead3'}[k]||'#ddd';P(0,0,16,16,bg);
+  if(k==='letter'){P(2,4,12,9,'#fbf6e8');P(2,4,12,1,'#b8a888');P(2,12,12,1,'#b8a888');P(2,4,1,9,'#b8a888');P(13,4,1,9,'#b8a888');
+    for(let i=0;i<6;i++){P(3+i,5+i*0.9|0,1,1,'#b8a888');P(12-i,5+i*0.9|0,1,1,'#b8a888');}P(7,9,2,2,'#c0392b');return c.toDataURL();}
+  const hair={boss:'#1a1a1a',tanaka:'#d8d8d8',rival:'#3a2a1a',pro:'#2b2118',staff:'#5a3a22'}[k],cloth={boss:'#232838',tanaka:'#6d5a8a',rival:'#eeeeee',pro:'#7a1f2e',staff:'#f3f3f3'}[k];
+  if(k==='pro'){P(3,3,10,11,hair);}
+  P(2,13,12,3,cloth);if(k==='staff'){P(6,13,4,3,'#1c1c1c');}if(k==='boss'){P(7,13,2,3,'#c8a04a');}if(k==='rival'){P(7,13,2,3,'#1a1a1a');}
+  P(4,4,8,9,'#f0c8a0');P(5,12,6,1,'#e2b48c');
+  if(k==='tanaka'){P(4,3,8,2,hair);P(3,4,1,4,hair);P(12,4,1,4,hair);P(5,7,2,1,'#7a7a7a');P(9,7,2,1,'#7a7a7a');}
+  else if(k==='rival'){P(4,2,8,3,hair);P(4,5,1,2,hair);P(11,3,2,2,hair);}
+  else if(k==='pro'){P(4,2,8,3,hair);P(3,4,1,8,hair);P(12,4,1,8,hair);P(11,3,2,1,'#ffd35a');}
+  else{P(4,2,8,3,hair);P(3,3,1,4,hair);P(12,3,1,4,hair);}
+  P(5,8,2,1,'#2a1a10');P(9,8,2,1,'#2a1a10');P(7,11,2,1,k==='rival'?'#8a4a3a':'#c0605a');
+  if(k==='tanaka'){P(4,10,1,1,'#e2a08c');P(11,10,1,1,'#e2a08c');}
+  return c.toDataURL();}
+let storyQ=[],storyCur=null;
+const storyOpen=()=>!!storyCur;
+function fillText(t){return t.replace(/\{boss\}/g,bossLabel()).replace(/\{shop\}/g,shopName());}
+function playScene(id,onDone,force){S.story=S.story||{};if(!STORY[id]||(S.story[id]&&!force)){onDone&&onDone();return;}
+  S.story[id]=1;save();storyQ.push({id,i:0,onDone});if(!storyCur)nextScene();}
+function nextScene(){storyCur=storyQ.shift()||null;const box=document.getElementById('story');if(!storyCur){box.classList.remove('show');return;}box.classList.add('show');showLine();}
+function showLine(){const [k,t]=STORY[storyCur.id][storyCur.i],face=document.getElementById('stFace');
+  if(k==='narr'){face.style.display='none';}else{face.style.display='';FACES[k]=FACES[k]||makeFace(k);face.src=FACES[k];}
+  document.getElementById('stName').textContent=SPK[k]();document.getElementById('stName').style.display=k==='narr'?'none':'';
+  const tx=document.getElementById('stText');tx.textContent=fillText(t);tx.classList.toggle('narr',k==='narr');
+  document.getElementById('stNext').textContent=storyCur.i<STORY[storyCur.id].length-1?'▼':'とじる';}
+function advanceStory(){if(!storyCur)return;storyCur.i++;if(storyCur.i>=STORY[storyCur.id].length){const cb=storyCur.onDone;storyCur=null;nextScene();cb&&cb();}else showLine();}
+function skipStory(){if(!storyCur)return;const cb=storyCur.onDone;storyCur=null;nextScene();cb&&cb();}
+document.getElementById('story').onclick=ev=>{if(ev.target.id==='stSkip')return;advanceStory();};
+document.getElementById('stSkip').onclick=skipStory;
+
+// ---------- loop ----------
+let last=performance.now(),acc=0;
+function loop(t){const dt=Math.max(0,Math.min((t-last)/1000,.1));last=t;if(S.started&&S.opened&&!storyOpen())update(dt);else{gt+=dt;updateOutside(dt);}tables.forEach(tb=>{if(tb.tap>0)tb.tap-=dt*3;});
+  draw();document.getElementById('money').textContent='¥'+fmt(S.money);drawTimebar();
+  acc+=dt;if(acc>.25){acc=0;refresh();}requestAnimationFrame(loop);}
+applyLayout();initWorld();fit();renderTab();if(S.started&&S.opened)offline(S.last);else if(S.started)prepareOpening();else playScene('prologue',()=>openMap('start'));if(S.closing===2){S.closing=1;closeT=0;}
+setInterval(save,5000);
+requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
