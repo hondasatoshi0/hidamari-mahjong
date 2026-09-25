@@ -215,6 +215,23 @@ nav button{font-size:12.5px}
 .mbtn:disabled{opacity:.45;cursor:default}
 .count{font-family:"Dela Gothic One",sans-serif;font-size:48px;color:var(--gold);margin:6px 0}
 @media (prefers-reduced-motion: reduce){#yk .box{animation:none}}
+/* 開業前(1号店の町を選ぶまで)は店内の代わりにプロローグの画面を出す */
+body.pre header,body.pre #timebar,body.pre #goal,body.pre #sheet{display:none}
+#intro{position:absolute;inset:0;z-index:7;display:none;overflow:hidden;background:#fbe3cf}
+body.pre #intro{display:block}
+body.pre #toast{z-index:8}
+#intro>.in-bg{position:absolute;inset:0;width:100%;height:100%}
+.in-title{position:absolute;left:0;right:0;top:9%;text-align:center;color:#5a3421;padding:0 16px}
+.in-title small{display:block;font-size:12px;font-weight:700;letter-spacing:.3em;opacity:.75}
+.in-title h1{margin:6px 0 0;font-family:"Dela Gothic One",sans-serif;font-weight:400;font-size:clamp(26px,8vw,36px);line-height:1.25;text-shadow:0 2px 0 rgba(255,255,255,.6)}
+.in-letter{position:absolute;left:50%;top:31%;width:min(46vw,200px);transform:translateX(-50%) rotate(-4deg);filter:drop-shadow(0 8px 14px rgba(90,52,33,.28));animation:inFloat 4s ease-in-out infinite}
+@keyframes inFloat{50%{transform:translateX(-50%) translateY(-8px) rotate(-2deg)}}
+#inGo{position:absolute;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);min-height:48px;padding:0 26px;border:0;border-radius:999px;
+  background:#c0392b;color:#fff;font:inherit;font-weight:700;font-size:15px;cursor:pointer;box-shadow:0 4px 14px rgba(90,20,10,.35);white-space:nowrap}
+#intro.talk #inGo{display:none}
+.petal{position:absolute;top:-16px;width:10px;height:8px;border-radius:10px 1px 10px 1px;background:#f6b6c8;opacity:.9;pointer-events:none;animation:petal linear infinite}
+@keyframes petal{to{transform:translate(-60px,110vh) rotate(540deg)}}
+@media (prefers-reduced-motion: reduce){.in-letter,.petal{animation:none}.petal{display:none}}
 </style>
 </head>
 <body>
@@ -237,6 +254,37 @@ nav button{font-size:12.5px}
   <div id="stage">
     <canvas id="cv" aria-label="雀荘の店内"></canvas>
     <div id="flash"></div>
+    <div id="intro" aria-label="プロローグ">
+      <svg class="in-bg" viewBox="0 0 360 640" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+        <defs><linearGradient id="inSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f7c9a8"/><stop offset=".55" stop-color="#fde8d4"/><stop offset="1" stop-color="#fff4e3"/></linearGradient></defs>
+        <rect width="360" height="640" fill="url(#inSky)"/>
+        <circle cx="70" cy="150" r="46" fill="#fff6dc" opacity=".8"/>
+        <path d="M0 470 Q90 430 180 455 T360 440 V640 H0z" fill="#d9e6c6"/>
+        <!-- 商店街:中央が祖父の店(2階の雀荘、まだ明かりは消えている) -->
+        <g fill="#b98b6c"><rect x="-4" y="440" width="84" height="120"/><rect x="274" y="430" width="90" height="130"/></g>
+        <g fill="#a57658"><rect x="80" y="410" width="100" height="150"/><rect x="180" y="425" width="94" height="135"/></g>
+        <g fill="#e9d7b8"><rect x="94" y="428" width="30" height="24" rx="2"/><rect x="136" y="428" width="30" height="24" rx="2"/></g>
+        <rect x="104" y="396" width="52" height="18" rx="3" fill="#7a3b2a"/><text x="130" y="409" text-anchor="middle" font-size="11" font-weight="700" fill="#f7e7c8">麻 雀</text>
+        <rect x="80" y="470" width="100" height="10" fill="#8a5a3c"/>
+        <g fill="#f3d38a"><rect x="12" y="488" width="56" height="40" rx="2"/><rect x="192" y="492" width="70" height="36" rx="2"/><rect x="286" y="486" width="66" height="42" rx="2"/></g>
+        <path d="M-4 482h84l-6 8H2zM180 486h94l-6 8h-82zM274 478h90l-6 8h-78z" fill="#c0392b" opacity=".85"/>
+        <rect x="92" y="488" width="22" height="40" fill="#5b3a28"/>
+        <rect x="0" y="560" width="360" height="80" fill="#e8dcc6"/><path d="M0 560h360" stroke="#cbb89a" stroke-width="3"/>
+        <!-- 桜の枝 -->
+        <g transform="translate(-44 30)">
+        <path d="M372 40 Q300 70 262 120 M318 64 Q300 30 276 22 M296 92 Q330 110 350 150" stroke="#6b4636" stroke-width="5" fill="none" stroke-linecap="round"/>
+        <g fill="#f6b6c8"><circle cx="262" cy="120" r="14"/><circle cx="276" cy="22" r="12"/><circle cx="350" cy="150" r="13"/><circle cx="300" cy="80" r="11"/><circle cx="330" cy="52" r="12"/><circle cx="286" cy="104" r="9"/><circle cx="324" cy="118" r="10"/></g>
+        <g fill="#fbd3de"><circle cx="268" cy="114" r="7"/><circle cx="280" cy="18" r="6"/><circle cx="346" cy="144" r="7"/><circle cx="334" cy="48" r="6"/></g></g>
+      </svg>
+      <div class="in-title"><small>プロローグ</small><h1>日本中に、<br>ひだまりを</h1></div>
+      <svg class="in-letter" viewBox="0 0 200 130" aria-hidden="true">
+        <rect x="2" y="2" width="196" height="126" rx="6" fill="#fffaf0" stroke="#d8c3a0" stroke-width="2"/>
+        <path d="M4 6 100 74 196 6" fill="none" stroke="#d8c3a0" stroke-width="2"/>
+        <circle cx="100" cy="74" r="17" fill="#c0392b"/><text x="100" y="80" text-anchor="middle" font-size="17" font-weight="700" fill="#fff4e3">ひ</text>
+        <rect x="150" y="14" width="34" height="40" fill="none" stroke="#e39aa9" stroke-width="2" stroke-dasharray="3 2"/><path d="M158 42q9-18 18 0" fill="#f6b6c8"/>
+      </svg>
+      <button type="button" id="inGo">全国マップで町を選ぶ</button>
+    </div>
     <div id="yk"><div class="box"><div class="big" id="ykBig">役満!</div><div class="yn" id="ykName"></div><div class="yb" id="ykBonus"></div></div></div>
     <button id="bonus" type="button"></button>
     <div id="toast"></div>
@@ -1170,7 +1218,7 @@ function renderTab(){
     <div class="note">汚れた卓はお客さんに避けられ、評判も下がります。全自動卓は時々故障するので、店内の卓をタップして対応してください。お店を離れている間も売上が貯まります(店長代行で最大12時間分まで延ばせます)。プレイ中の卓をタップすると、半荘が少し早く進みます。</div>
     <div class="row"><div><div class="nm">データをリセット</div><div class="ds">最初からやり直します</div></div><button class="buy" id="resetBtn">リセット</button></div>`;
     let armed=false;document.getElementById('resetBtn').onclick=e=>{if(!armed){armed=true;e.target.textContent='もう一度押す';setTimeout(()=>{armed=false;e.target.textContent='リセット';},3000);return;}
-      try{localStorage.removeItem(KEY);}catch(_){}S=fresh();REG=REGS[0];applyLayout();initWorld();renderTab();playScene('prologue',()=>openMap('start'));toast('リセットしました');};
+      try{localStorage.removeItem(KEY);}catch(_){}S=fresh();REG=REGS[0];applyLayout();initWorld();renderTab();setPre();playScene('prologue',()=>openMap('start'));toast('リセットしました');};
     refresh();return;}
   if(tab==='staff'){{const d=document.createElement('div');d.className='row';L.appendChild(d);
       d.innerHTML=`<div><div class="nm">${esc(bossLabel())}<small>あなた</small><small class="sst"></small></div><div class="ds">手が空いていればスタッフと同じ仕事を自動でこなします。注文、器の残ったサイドテーブル、汚れた卓、3人待っている卓をタップすると、その仕事を優先します。スタミナはありません</div><div class="stw">${statHTML(S.boss,1)}</div></div><div class="btns"><button class="alt tr" type="button">研修</button><button class="alt nmb" type="button">名前</button></div>`;
@@ -1242,7 +1290,9 @@ function doDismiss(c){
     ents.filter(x=>x.type==='staff').forEach(x=>{const i=S.members.indexOf(x.st);if(i!==x.idx){x.idx=i;if(x.state==='idle')goHome(x);}});}
   toast(c.m.name+'さんが退職しました');save();renderTab();
 }
+function setPre(){document.body.classList.toggle('pre',!S.started);document.getElementById('intro').classList.toggle('talk',storyOpen());}
 function refresh(){
+  setPre();
   rows.forEach(r=>{
     if(r.crew){const e=ents.find(x=>x.st===r.crew.m);const m=r.crew.m;r.sst.textContent=r.boss?staffState(e):(m.quitting?'退職予定 ':'')+staffState(e)+`  体力 ${Math.ceil(m.stam??stamMax(m))}/${stamMax(m)}`;
       r.dm.textContent=r.crew.m.quitting?'予約を取り消す':r.armed?(e&&e.state!=='idle'?'もう一度押すと予約':'もう一度押す'):'辞めてもらう';const h=statHTML(r.crew.m,1);if(r.stw._h!==h){r.stw.innerHTML=h;r.stw._h=h;}return;}
@@ -1371,7 +1421,7 @@ function renderMapPanel(){const P=document.getElementById('mapPanel'),i=mapSel,g
   else{const prev=STAGES[i-1];body=`<h3>${g.no}号店 ???</h3><div class="mp-sub">${prev?`${prev.no}号店(${prev.area})の目標を達成して出店すると、次の街が選べるようになります`:''}</div>`;}
   P.innerHTML=body;const b=document.getElementById('mpGo');if(!b)return;
   b.onclick=()=>{if(st==='open'){closeMap();if(i!==S.active)switchShop(i);}
-    else if(st==='next'){if(i===0){closeMap();askBossName(()=>{S.started=1;S.opened=0;save();prepareOpening();},true);return;document.getElementById('goal')._k=null;}
+    else if(st==='next'){if(i===0){closeMap();askBossName(()=>{S.started=1;S.opened=0;save();setPre();prepareOpening();},true);return;document.getElementById('goal')._k=null;}
       else if(S.money>=g.open){closeMap();newStore();}}};}
 // ---------- ストーリー「日本中に、ひだまりを」 ----------
 // 話し手: boss=店長 tanaka=田中さん letter=祖父の手紙 rival=雀王グループの若社長 pro=麻雀プロ staff=スタッフ narr=ナレーション
@@ -1463,7 +1513,7 @@ const storyOpen=()=>!!storyCur;
 function fillText(t){return t.replace(/\{boss\}/g,bossLabel()).replace(/\{shop\}/g,shopName());}
 function playScene(id,onDone,force){S.story=S.story||{};if(!STORY[id]||(S.story[id]&&!force)){onDone&&onDone();return;}
   S.story[id]=1;save();storyQ.push({id,i:0,onDone});if(!storyCur)nextScene();}
-function nextScene(){storyCur=storyQ.shift()||null;const box=document.getElementById('story');if(!storyCur){box.classList.remove('show');return;}box.classList.add('show');showLine();}
+function nextScene(){storyCur=storyQ.shift()||null;setPre();const box=document.getElementById('story');if(!storyCur){box.classList.remove('show');return;}box.classList.add('show');showLine();}
 function showLine(){const [k,t]=STORY[storyCur.id][storyCur.i],face=document.getElementById('stFace');
   if(k==='narr'){face.style.display='none';}else{face.style.display='';FACES[k]=FACES[k]||makeFace(k);face.src=FACES[k];}
   document.getElementById('stName').textContent=SPK[k]();document.getElementById('stName').style.display=k==='narr'?'none':'';
@@ -1477,9 +1527,12 @@ document.getElementById('stSkip').onclick=skipStory;
 // ---------- loop ----------
 let last=performance.now(),acc=0;
 function loop(t){const dt=Math.max(0,Math.min((t-last)/1000,.1));last=t;if(S.started&&S.opened&&!storyOpen())update(dt);else{gt+=dt;updateOutside(dt);}tables.forEach(tb=>{if(tb.tap>0)tb.tap-=dt*3;});
-  draw();document.getElementById('money').textContent='¥'+fmt(S.money);drawTimebar();
+  if(S.started)draw();document.getElementById('money').textContent='¥'+fmt(S.money);drawTimebar();
   acc+=dt;if(acc>.25){acc=0;refresh();}requestAnimationFrame(loop);}
-applyLayout();initWorld();fit();renderTab();if(S.started&&S.opened)offline(S.last);else if(S.started)prepareOpening();else playScene('prologue',()=>openMap('start'));if(S.closing===2){S.closing=1;closeT=0;}
+{const iv=document.getElementById('intro');for(let i=0;i<14;i++){const p=document.createElement('i');p.className='petal';
+  p.style.cssText=`left:${Math.random()*110}%;animation-duration:${7+Math.random()*6}s;animation-delay:${-Math.random()*12}s;width:${7+Math.random()*6}px;height:${6+Math.random()*4}px`;iv.appendChild(p);}
+  document.getElementById('inGo').onclick=()=>{if(!S.started&&!storyOpen())openMap('start');};}
+setPre();applyLayout();initWorld();fit();renderTab();if(S.started&&S.opened)offline(S.last);else if(S.started)prepareOpening();else playScene('prologue',()=>openMap('start'));if(S.closing===2){S.closing=1;closeT=0;}
 setInterval(save,5000);
 requestAnimationFrame(loop);
 })();
