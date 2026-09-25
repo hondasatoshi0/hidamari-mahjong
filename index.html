@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>雀荘経営 プロトタイプ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -98,6 +98,7 @@ nav button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--acce
 /* ===== スマホ縦画面向けレイアウト ===== */
 html,body{height:100%;height:100dvh}
 body{touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+*{touch-action:manipulation} /* touch-actionは継承されないので全要素でダブルタップズームを止める */
 #app{height:100%;max-width:560px}
 header{display:block;padding:8px 14px 6px}
 .hd-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
@@ -116,7 +117,8 @@ header{display:block;padding:8px 14px 6px}
 #sheet{height:auto;min-height:0;flex:0 0 auto;border-top:0;border-radius:16px 16px 0 0;box-shadow:0 -4px 16px rgba(0,0,0,.18);position:relative;z-index:2}
 #sheet #list{flex:0 0 auto;height:30vh;height:30dvh;max-height:340px;overscroll-behavior:contain}
 #sheet.collapsed #list{display:none}
-#sheetToggle{display:flex;align-items:center;justify-content:center;width:100%;height:18px;border:0;background:none;cursor:pointer;padding:0}
+#sheetToggle,#sheet nav{touch-action:none} /* 取っ手とタブ列はドラッグで開閉 */
+#sheetToggle{display:flex;align-items:center;justify-content:center;width:100%;height:22px;border:0;background:none;cursor:pointer;padding:0}
 #sheetToggle span{width:40px;height:5px;border-radius:3px;background:var(--line)}
 nav{border-bottom:1px solid var(--line)}
 nav button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:52px;padding:4px 0 6px;font-size:11px;border-bottom-width:3px}
@@ -1273,6 +1275,25 @@ sheetBtn.onclick=()=>setSheet(sheetEl.classList.contains('collapsed'));
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
   if(tab===b.dataset.tab){setSheet(sheetEl.classList.contains('collapsed'));return;} // 選択中のタブをもう一度押すと開閉
   tab=b.dataset.tab;setSheet(true);document.querySelectorAll('nav button').forEach(x=>x.setAttribute('aria-selected',x===b));renderTab();});
+// ドラッグで開閉:取っ手・タブ列は上下に、リストは一番上までスクロールした状態から下へ引くと閉じる
+const listEl=document.getElementById('list');let drag=null,dragUntil=0;
+function fullH(){const c=sheetEl.classList.contains('collapsed');listEl.style.height='';sheetEl.classList.remove('collapsed');const h=listEl.offsetHeight;sheetEl.classList.toggle('collapsed',c);return h;}
+function dStart(y,fromList){drag={y0:y,t0:Date.now(),h0:sheetEl.classList.contains('collapsed')?0:listEl.offsetHeight,full:fullH(),on:false,fromList,dy:0};}
+function dMove(y){if(!drag)return false;const dy=y-drag.y0;
+  if(!drag.on){if(Math.abs(dy)<8)return false;if(drag.fromList&&dy<0){drag=null;return false;}drag.on=true;sheetEl.classList.remove('collapsed');}
+  listEl.style.height=Math.max(0,Math.min(drag.full,drag.h0-dy))+'px';drag.dy=dy;return true;}
+function dEnd(){if(!drag)return;if(drag.on){const h=listEl.offsetHeight,flick=Date.now()-drag.t0<250&&Math.abs(drag.dy)>20;
+    listEl.style.height='';setSheet(flick?drag.dy<0:drag.h0>0?h>drag.full*.7:h>drag.full*.3);dragUntil=Date.now()+350;}drag=null;}
+[sheetBtn,sheetEl.querySelector('nav')].forEach(el=>el.addEventListener('pointerdown',e=>{if(e.button===0)dStart(e.clientY,false);}));
+window.addEventListener('pointermove',e=>{if(drag&&!drag.fromList)dMove(e.clientY);});
+window.addEventListener('pointerup',()=>{if(drag&&!drag.fromList)dEnd();});
+window.addEventListener('pointercancel',()=>{if(drag&&!drag.fromList)dEnd();});
+listEl.addEventListener('touchstart',e=>{if(listEl.scrollTop<=0&&e.touches.length===1)dStart(e.touches[0].clientY,true);},{passive:true});
+listEl.addEventListener('touchmove',e=>{if(drag&&drag.fromList&&dMove(e.touches[0].clientY))e.preventDefault();},{passive:false});
+listEl.addEventListener('touchend',()=>{if(drag&&drag.fromList)dEnd();});
+listEl.addEventListener('touchcancel',()=>{if(drag&&drag.fromList)dEnd();});
+sheetEl.addEventListener('click',e=>{if(Date.now()<dragUntil){e.stopPropagation();e.preventDefault();}},true); // ドラッグ直後のタップ扱いを無効化
+document.addEventListener('gesturestart',e=>e.preventDefault()); // iOSのピンチズーム抑止
 document.getElementById('rushBtn').onclick=()=>{if(proOn())return;playAd(()=>{S.proUntil=Date.now()+120000;if(!ents.some(e=>e.type==='pro'))mkPro();spawnT=0;toast('麻雀プロが来店!2分間、客足が2倍になります');save();});};
 
 let toastTimer;function toast(m){const t=document.getElementById('toast');t.textContent=m;t.style.opacity=1;clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.style.opacity=0,1800);}
