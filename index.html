@@ -173,6 +173,9 @@ body.story .hd-btns{visibility:hidden} /* 会話中は右上をスキップボ�
 #stNext{position:absolute;right:12px;bottom:4px;font-size:12px;color:#ffd35a;animation:stBlink 1s infinite}
 @keyframes stBlink{50%{opacity:.2}}
 .row.two{grid-template-columns:1fr auto auto}
+.row.two>.alt{grid-column:2}.row.two>.buy{grid-column:3} /* 修理ボタンが隠れていても購入ボタンは右端に置く */
+.row>.buy,.row>.btns,.row>.visits,.row>:last-child{justify-self:end} /* どの行もボタンは右端にそろえる */
+.btns{align-items:stretch}
 .alt{border:1.5px solid var(--accent);border-radius:10px;min-height:44px;min-width:64px;padding:6px 10px;font:inherit;font-weight:700;font-size:13px;background:transparent;color:var(--accent);cursor:pointer}
 .alt.hide{display:none}
 .hearts{color:#e0506a;font-size:12px;letter-spacing:1px}
@@ -261,9 +264,14 @@ body.tut .hd-btns{visibility:hidden} /* チュートリアル中は右上をス�
 /* 課金ショップ */
 #shopOpen{width:44px;height:44px;flex:none;border:0;border-radius:50%;background:var(--gold);color:#1b1206;display:flex;align-items:center;justify-content:center;cursor:pointer}
 #shopOpen:focus-visible,#spdBtn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
-#spdBtn{position:absolute;left:8px;top:8px;z-index:5;display:none;min-height:36px;min-width:52px;padding:0 12px;border-radius:999px;border:1.5px solid rgba(255,255,255,.75);
+#spdBtn{position:absolute;left:8px;top:8px;z-index:5;display:flex;align-items:center;gap:4px;min-height:36px;min-width:52px;padding:0 12px;border-radius:999px;border:1.5px solid rgba(255,255,255,.75);
   background:rgba(20,20,30,.6);color:#fff;font:inherit;font-weight:700;font-size:13px;cursor:pointer}
-#spdBtn.show{display:block}
+#spdBtn.lock{opacity:.8;color:rgba(255,255,255,.75);border-color:rgba(255,255,255,.45)}
+#spdBtn svg{display:block}
+#bgmBtn{position:absolute;right:8px;top:8px;z-index:5;width:40px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:999px;border:1.5px solid rgba(255,255,255,.75);
+  background:rgba(20,20,30,.6);color:#fff;cursor:pointer;padding:0}
+#bgmBtn.off{opacity:.7;border-color:rgba(255,255,255,.45)}
+#bgmBtn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 #spdBtn.fast{background:var(--gold);border-color:var(--gold);color:#1b1206}
 #iap{position:fixed;inset:0;z-index:9;display:none;flex-direction:column;background:var(--bg);padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 #iap.show{display:flex}
@@ -287,6 +295,7 @@ body.tut .hd-btns{visibility:hidden} /* チュートリアル中は右上をス�
 .cos .sw{height:44px;border-radius:8px;display:flex;align-items:center;justify-content:center;gap:4px}
 .cos .sw i{display:block;border-radius:2px}
 .cos b{font-size:13.5px}
+.cos .fx{font-size:12px;color:var(--gold);font-weight:700;line-height:1.4;flex:1}
 .cos .buy{min-width:0;width:100%;min-height:40px;font-size:13.5px}
 .cos .buy.eq{background:transparent;color:var(--accent);box-shadow:inset 0 0 0 1.5px var(--accent)}
 </style>
@@ -312,6 +321,7 @@ body.tut .hd-btns{visibility:hidden} /* チュートリアル中は右上をス�
     <canvas id="cv" aria-label="雀荘の店内"></canvas>
     <div id="flash"></div>
     <button id="spdBtn" type="button" aria-label="営業の速さを切り替える"></button>
+    <button id="bgmBtn" type="button"></button>
     <div id="intro" aria-label="プロローグ">
       <svg class="in-bg" viewBox="0 0 360 640" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
         <defs><linearGradient id="inSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f7c9a8"/><stop offset=".55" stop-color="#fde8d4"/><stop offset="1" stop-color="#fff4e3"/></linearGradient></defs>
@@ -394,24 +404,26 @@ const upCost=(i,t)=>Math.round((t===0?3000:40000)*Math.pow(1.35,i));
 const OFFCAP=[2,4,8,12],OFF_EFF=0.25,OFF_EFF_PLUS=0.4;
 const MGR_IAP=[160,480,980]; // 店長代行のレベルアップは課金のみ(円、レベルごと)
 // 課金アイテム(円)。購入状態はS.iapに持ち、店をまたいで共通。データをリセットしても消さない
-const IAP={noAds:{name:'広告スキップ永久パス',yen:610},speed:{name:'倍速モード',yen:480},off:{name:'留守番ブースト',yen:370},starter:{name:'スターターパック',yen:370}};
+const IAP={noAds:{name:'広告スキップ永久パス',yen:610},speed:{name:'倍速モード',yen:480},off:{name:'留守番ブースト',yen:370},starter:{name:'スターターパック',yen:370},bundle:{name:'快適セット',yen:1100}};
+const BUNDLE=['speed','noAds','off']; // 快適セットの中身。どれか1つでも持っていたらセットは出さない
 const SPEEDS=[1,1.5,2];
 const STARTER_MONEY=5000; // スターターパックの資金(物価で増える)
-// 見た目だけの着せ替え。stdは最初から持っている
+// 着せ替え。stdは最初から持っていて効果なし。身に付けている1つの効果(fx)だけが効く
 const COS={
   uniform:{name:'スタッフの制服',items:[
     {k:'std',n:'白シャツとベスト',body:'#f3f3f3',vest:'#1c1c1c',tie:'#b8182e'},
-    {k:'happi',n:'ひだまり法被',body:'#d8452f',vest:'#f3e3c0',tie:'#1c1c1c',yen:120},
-    {k:'samue',n:'藍の作務衣',body:'#2f4a7a',vest:'#1d2c4a',tie:'#e8d9b0',yen:120},
-    {k:'butler',n:'執事の燕尾服',body:'#26282e',vest:'#f3f3f3',tie:'#c8a04a',yen:250}]},
+    {k:'happi',n:'ひだまり法被',body:'#d8452f',vest:'#f3e3c0',tie:'#1c1c1c',yen:120,fx:{order:1.1},fxt:'ドリンク・フードの注文 +10%'},
+    {k:'samue',n:'藍の作務衣',body:'#2f4a7a',vest:'#1d2c4a',tie:'#e8d9b0',yen:120,fx:{stam:.85},fxt:'スタッフのスタミナ消費 −15%'},
+    {k:'butler',n:'執事の燕尾服',body:'#26282e',vest:'#f3f3f3',tie:'#c8a04a',yen:250,fx:{rep:1.15,w:1.1},fxt:'評判の上がり方 +15%、会社員の来店 +10%'}]},
   mat:{name:'卓のマット',items:[
-    {k:'std',n:'定番の緑',c:'#2e7d4f'},{k:'navy',n:'深い紺',c:'#233f7a',yen:120},
-    {k:'wine',n:'ワインレッド',c:'#7a2334',yen:120},{k:'violet',n:'紫紺',c:'#4a2f78',yen:120}]},
+    {k:'std',n:'定番の緑',c:'#2e7d4f'},{k:'navy',n:'深い紺',c:'#233f7a',yen:120,fx:{dur:.95},fxt:'半荘の時間 −5%'},
+    {k:'wine',n:'ワインレッド',c:'#7a2334',yen:120,fx:{set:1.1},fxt:'セット卓の料金 +10%'},{k:'violet',n:'紫紺',c:'#4a2f78',yen:120,fx:{reg:.2},fxt:'常連の好感度の上がり方 +20%'}]},
   tile:{name:'牌の色',items:[
-    {k:'std',n:'定番',c:null},{k:'sakura',n:'桜色',c:'#f19bb5',yen:120},
-    {k:'black',n:'漆黒',c:'#2a2c33',yen:120},{k:'gold',n:'黄金',c:'#ffe45c',yen:250}]}
+    {k:'std',n:'定番',c:null},{k:'sakura',n:'桜色',c:'#f19bb5',yen:120,fx:{g:1.15},fxt:'学生の来店 +15%'},
+    {k:'black',n:'漆黒',c:'#2a2c33',yen:120,fx:{sPat:1.2},fxt:'シニアが待てる時間 +20%'},{k:'gold',n:'黄金',c:'#ffe45c',yen:250,fx:{yk:1.2},fxt:'役満の確率 ×1.2'}]}
 };
 const cosItem=cat=>COS[cat].items.find(i=>i.k===((S.iap.wear||{})[cat]||'std'))||COS[cat].items[0];
+const cfx=(k,d=1)=>{for(const cat in COS){const f=cosItem(cat).fx;if(f&&f[k]!=null)return f[k];}return d;}; // 着せ替えの効果(なければd)
 const hasCos=(cat,k)=>k==='std'||!!(S.iap.own||{})[cat+':'+k];
 const noAds=()=>!!S.iap.noAds;
 const adPre=()=>noAds()?'':'広告を見て'; // 広告スキップ購入後はボタンから「広告を見て」を外す
@@ -421,7 +433,7 @@ const YAKU=['国士無双','四暗刻','大三元','字一色','緑一色','小�
 const SLOTS=[];
 const ROW_GAP=134; // 卓の縦の間隔
 // 卓数に合わせて店内のつくりを変える(4卓:2×2、6卓:3×2、9卓:3×3)
-function applyLayout(){
+function applyLayout(bg){
   const n=Math.max(ST().max,(S.tiers||[]).length),cols=n<=4?2:n<=9?3:4,rows=n<=6?2:n<=12?3:4;
   W=cols===4?640:480;DOOR=AISLE=W/2;
   const xs=cols===2?[140,340]:cols===3?[80,240,400]:[85,235,405,555];AISLES=cols===2?[240]:cols===3?[160,320]:[160,320,480];COUNTER_X=cols===2?262:cols===3?212:196;
@@ -430,9 +442,14 @@ function applyLayout(){
   SLOTS.length=0;for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)SLOTS.push({x:xs[c],y:190+r*ROW_GAP});
   const lastY=190+(rows-1)*ROW_GAP;HI=lastY+118;CY=lastY+83;H=HI+OUT;SW=HI+26;
   HALLHOME.x=164+memberCap()*26;
-  planks.length=0;for(let y=0;y<HI;y+=16){let x=-Math.random()*60;const row=[];while(x<W){const w=50+Math.random()*70;row.push({x,w,s:Math.random()});x+=w;}planks.push({y,row});}
-  if(typeof fit==='function'&&cv)fit();
+  if(bg)return; // 裏で営業する店は床板やキャンバスを作らない
+  genPlanks();if(typeof fit==='function'&&cv)fit();
 }
+function genPlanks(){planks.length=0;for(let y=0;y<HI;y+=16){let x=-Math.random()*60;const row=[];while(x<W){const w=50+Math.random()*70;row.push({x,w,s:Math.random()});x+=w;}planks.push({y,row});}}
+// 店ごとのつくり(通路や卓の位置など)を保存・復元する
+function getLayout(){return{W,H,HI,AISLES,CY,SW,COUNTER_X,DOOR,AISLE,kx:KIT.x,brk:BREAK_SPOTS.slice(),slots:SLOTS.slice(),hx:HALLHOME.x};}
+function setLayout(L){({W,H,HI,AISLES,CY,SW,COUNTER_X,DOOR,AISLE}=L);KIT.x=L.kx;HALLHOME.x=L.hx;
+  BREAK_SPOTS.length=0;BREAK_SPOTS.push(...L.brk);SLOTS.length=0;SLOTS.push(...L.slots);}
 const OFF=[[0,-44],[44,0],[0,44],[-44,0]];
 const CT={
   s:{name:'シニア',body:['#8a7a66','#6d7f6a','#9b6b5a','#7a6f8a'],hair:['#d8d8d8','#bdbdbd','#9a9a9a','#eeeeee'],pat:50,stay:.55,dr:0.35,fd:0.08,di:'🍵',fi:'🍙',tier:0,set:.35},
@@ -498,16 +515,14 @@ const ST=()=>STAGES[Math.min(S.stage||0,STAGES.length-1)];
 // 店の広さに合わせたメンバーの上限(4卓:3人、6卓:4人、9卓:6人)
 const memberCap=()=>({4:3,6:4,9:6,12:7,16:9})[ST().max]||3;
 const CM=()=>ST().cost; // 物価は場代より速く上がる(前の店の資金や収入で買いすぎないように)
-const BG_SHARE=0.1;
 const pr=v=>Math.round(v*CM());
-const bgIncome=()=>(S.shops||[]).reduce((a,sh,i)=>i===S.active?a:a+(sh.bestRate||0)*BG_SHARE,0);
+// アプリを閉じている間のほかの店の売上(1秒あたり)。いまの店と同じく留守中の効率で見積もる。開いている間は裏で実際に営業する
+const bgIncome=()=>(S.shops||[]).reduce((a,sh,i)=>i===S.active||!sh.opened?a:a+(sh.bestRate||0)*offEff(),0);
 const storeRate=()=>Math.max(S.bestRate||0,S.rate||0);
 const goalMet=()=>S.storeEarn>=ST().goal.earn&&S.rep>=ST().goal.rep;
 // 内装はそれぞれ3段階。段階ごとに来店ペース +b
 const DECO={
   plant:{name:'観葉植物',grades:['小さな鉢植え','鉢植えを2つ','大きな鉢植えを3つ'],b:.08,c:120,g:4.5},
-  clock:{name:'時計',grades:['壁掛け時計','振り子時計','電光時計'],b:.06,c:200,g:4.5},
-  speaker:{name:'BGMスピーカー',grades:['小型スピーカー','ステレオスピーカー','店内4か所のスピーカー'],b:.08,c:350,g:4.5},
   light:{name:'照明',grades:['間接照明','卓ごとのペンダントライト','シャンデリア'],b:.12,c:600,g:4.5},
   purifier:{name:'空気清浄機',grades:['家庭用','業務用','2台体制'],b:.10,c:900,g:4.5},
   art:{name:'絵画',grades:['小さな絵','金の額縁の絵画','絵画を2枚'],b:.08,c:1500,g:4.5},
@@ -515,10 +530,11 @@ const DECO={
 };
 // 各グレードを5段階に分けて少しずつ強化する。見た目は5段階ごとに次のグレードになる
 const DECO_STEP=5;
+const speakers=()=>[[4,150],[W-13,364]]; // 常設のBGMスピーカーの位置(左の壁と右の壁。店の幅で変わる)
 Object.values(DECO).forEach(d=>{d.max=d.grades.length*DECO_STEP;d.gs=Math.pow(d.g,1/DECO_STEP);d.c1=d.c*(d.gs-1)/(d.g-1);});
 const dg=k=>Math.ceil(S.deco[k]/DECO_STEP); // 見た目のグレード(0〜3)
 const DEF={kind:'free',story:null,boss:null,started:0,active:0,shops:null,stage:0,storeEarn:0,chain:0,stores:[],cleared:0,members:null,hallStaff:null,cands:{},broom:0,maint:0,repairs:0,cleans:0,money:200,tiers:[0,0],modes:['free','free'],clock:600,day:1,closing:0,rep:3,visits:0,regs:[0,0,0,0,0],dayEarn:0,dayVisits:0,fee:0,drink:0,food:0,hall:0,staff:1,wait:1,tv:0,manga:0,mag:0,
-  deco:{plant:0,clock:0,speaker:0,light:0,purifier:0,art:0,neon:0},
+  deco:{plant:0,light:0,purifier:0,art:0,neon:0},
   total:0,games:0,yaku:0,lost:0,served:0,proUntil:0,rate:0,lv2:1,tut:0,last:Date.now()};
 const KEY='jansou-proto-v3';
 function fresh(){return clampS(JSON.parse(JSON.stringify(Object.assign({},DEF,{last:Date.now()}))));}
@@ -552,7 +568,7 @@ function clampS(d){d.iap=Object.assign({noAds:0,speed:0,mul:1,off:0,starter:0},d
   migrateShops(d);return d;}
 const SHOP_KEYS=['kind','opened','shopName','mgr','stage','tiers','modes','tb','fee','drink','food','hall','hallStaff','members','staff','wait','tv','manga','mag','broom','maint','deco','rep','storeEarn','bestRate','rate','regs','visits','cands','cleared'];
 function freshShop(stage,d,kind){kind=kind||'free';return{kind,opened:0,shopName:'',stage,tiers:[0,0],modes:[kind,kind],tb:[],fee:0,drink:0,food:0,hall:kind==='set'?1:0,hallStaff:kind==='set'?genStaffRaw(d):null,members:kind==='set'?[]:[genStaffRaw(d)],staff:kind==='set'?0:1,
-  mgr:0,wait:kind==='set'?0:1,tv:0,manga:0,mag:0,broom:0,maint:0,deco:{plant:0,clock:0,speaker:0,light:0,purifier:0,art:0,neon:0},rep:3,storeEarn:0,bestRate:0,rate:0,regs:[0,0,0,0,0],visits:0,cands:{},cleared:0};}
+  mgr:0,wait:kind==='set'?0:1,tv:0,manga:0,mag:0,broom:0,maint:0,deco:{plant:0,light:0,purifier:0,art:0,neon:0},rep:3,storeEarn:0,bestRate:0,rate:0,regs:[0,0,0,0,0],visits:0,cands:{},cleared:0};}
 function snapShop(d){const o={};SHOP_KEYS.forEach(k=>o[k]=d[k]);return JSON.parse(JSON.stringify(o));}
 function migrateShops(d){if(d.shops)return;const cur=d.stage||0;d.shops=[];
   for(let i=0;i<cur;i++){const sh=freshShop(i,d);sh.bestRate=((d.stores||[])[i]||{}).rate||0;sh.cleared=1;d.shops.push(sh);}
@@ -562,7 +578,8 @@ function genStaffRaw(d){const keep=S;S=d;const r=genStaff();S=keep;return r;}
 function migrateLv(o){const f=x=>{x.fee=Math.round((x.fee||0)*2.5);x.drink=x.drink?1+Math.round((x.drink-1)*2.5):0;x.food=x.food?1+Math.round((x.food-1)*2.5):0;
   if(x.deco)Object.keys(x.deco).forEach(k=>x.deco[k]*=DECO_STEP);};f(o);(o.shops||[]).forEach(f);o.lv2=1;}
 function load(){try{const s=localStorage.getItem(KEY)||localStorage.getItem('jansou-proto-v2');if(s){const o=JSON.parse(s);if(!o.lv2)migrateLv(o);if(o.tut==null)o.tut=o.started?-1:0;const d=fresh();Object.assign(d,o);if(!o.members){d.members=null;if(!o.hallStaff)d.hallStaff=null;}d.deco=Object.assign({},DEF.deco,o.deco||{});while(d.modes.length<d.tiers.length)d.modes.push('free');if(o.storeEarn==null)d.storeEarn=d.total||0;return clampS(d);}}catch(e){}return fresh();}
-function save(){S.last=Date.now();if(tables.length)S.tb=tables.map(t=>({d:+t.dirt.toFixed(2),b:t.broken?1:0,m:t.manual?1:0}));if(S.shops)S.shops[S.active]=snapShop(S);try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+function save(){if(BG)return; /* 裏の店を動かしている間はSの中身が入れ替わっているので保存しない */S.last=Date.now();if(tables.length)S.tb=tables.map(t=>({d:+t.dirt.toFixed(2),b:t.broken?1:0,m:t.manual?1:0}));
+  Object.keys(worlds).forEach(i=>{if(S.shops[i])S.shops[i].tb=worlds[i].tables.map(t=>({d:+t.dirt.toFixed(2),b:t.broken?1:0,m:t.manual?1:0}));});if(S.shops)S.shops[S.active]=snapShop(S);try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
 let S;S=load();if(!S.cands)S.cands={};REG=REGS[S.stage||0];
 
 const tierOf=tb=>tb.manual?0:S.tiers[tb.slot];
@@ -578,10 +595,10 @@ const decoBonus=()=>Object.keys(DECO).reduce((a,k)=>a+S.deco[k]*DECO[k].b/DECO_S
 const repMult=()=>0.5+0.2*S.rep;
 const hourNow=()=>Math.min(23,Math.floor(S.clock/60));
 const BASE_INTERVAL=6.5; // 来店間隔の基準(秒)
-const interval=()=>BASE_INTERVAL/(1+decoBonus())/(proOn()?2:1)/HOURS[hourNow()][0]/repMult()/ST().traffic*(isSet()?2:1); // セットは4人組なので来る間隔を長く
-const setRate=tb=>Math.round(500*(1+0.1*S.fee)*(1+0.3*tierOf(tb))*ST().fee);
-function addRep(d){S.rep=Math.max(1,Math.min(5,S.rep+d));}
-function pickType(mix){let r=Math.random(),a=0;for(const k of['s','w','g']){a+=mix[k];if(r<a)return k;}return 'g';}
+const interval=()=>BASE_INTERVAL/(1+decoBonus())/(proOn()&&!BG?2:1)/HOURS[hourNow()][0]/repMult()/ST().traffic*(isSet()?2:1); // セットは4人組なので来る間隔を長く
+const setRate=tb=>Math.round(500*(1+0.1*S.fee)*(1+0.3*tierOf(tb))*ST().fee*cfx('set'));
+function addRep(d){if(d>0)d*=cfx('rep');S.rep=Math.max(1,Math.min(5,S.rep+d));}
+function pickType(mix){const w=k=>mix[k]*cfx(k),r=Math.random()*(w('s')+w('w')+w('g'));let a=0;for(const k of['s','w','g']){a+=w(k);if(r<a)return k;}return 'g';}
 
 const patience=()=>25+(S.mag?10:0)+(S.manga?20:0)+(S.tv?20:0);
 function fmt(n){n=Math.floor(n);if(n>=1e8)return(n/1e8).toFixed(2)+'億';if(n>=1e5)return(n/1e4).toFixed(n>=1e6?0:1)+'万';return n.toLocaleString('ja-JP');}
@@ -590,6 +607,9 @@ const rnd=(a,b)=>a+Math.random()*(b-a);
 // ---------- runtime ----------
 let chainAcc=0,gt=0,ents=[],tables=[],floats=[],parts=[],orders=[],nid=1,spawnT=1,shake=0,incomeLog=[],playTime=0,noteT=0;
 let waitSeats=[null,null,null,null];
+// 店長がいない店も裏で営業を続ける。店ごとの店内(お客さん・卓・スタッフ)をworldsに持ち、BGの間はその店を動かしている
+// 裏の店の売上もそのまま所持金に入る(bgLogは「ほかの店からの収入」の表示用)
+let BG=false,bgIdx=-1,wDay=0,bgAcc=0,bgLog=[];const worlds={};
 function addTable(){tables.push({side:[[],[],[],[]],busy:[null,null,null,null],dirt:0,broken:false,manual:false,repairing:false,cleaner:null,setUntil:0,setStart:0,slot:tables.length,seats:[null,null,null,null],state:'open',t:0,waitSince:0,tap:0,pend:[]});}
 // 待機位置はカウンター裏の通路に横一列(待合室と厨房の間)
 function home(i){return{x:164+i*26,y:HOMEY};}
@@ -637,9 +657,9 @@ function spawnTanaka(){const e=mkCust('s',0);e.bubble='どうも';e.bubbleT=3;co
 const isCrew=e=>e&&(e.type==='staff'||e.type==='boss');
 function proStand(e){freeSeat(e);e.orders=[];e.state='toStand';const y=Math.min(364,CY-24);route(e,AISLES[0],y,y);}
 function mkPro(){const e={id:nid++,type:'pro',outside:1,x:-16,y:SW,corr:CY,path:[],moving:false,state:'toStand',dir:-Math.PI/2,body:'#1f2a4a',hair:'#111'};ents.push(e);route(e,AISLES[0],Math.min(364,CY-24),Math.min(364,CY-24));}
-function initWorld(){ents=[];tables=[];orders=[];waitSeats=[null,null,null,null];
+function initWorld(bg){ents=[];tables=[];orders=[];waitSeats=[null,null,null,null];floats=[];parts=[];incomeLog=[];playTime=0;spawnT=1;noteT=0;closeT=0;wDay=0;
   for(let i=0;i<S.tiers.length;i++){addTable();const st=(S.tb||[])[i];if(st){tables[i].dirt=st.d||0;tables[i].broken=!!st.b;tables[i].manual=!!st.m;}}
-  for(let i=0;i<S.members.length;i++)mkStaff(i);if(S.hall)mkHall();mkBoss();if(proOn())mkPro();}
+  for(let i=0;i<S.members.length;i++)mkStaff(i);if(S.hall)mkHall();if(bg)return;mkBoss();if(proOn())mkPro();}
 const byId=id=>ents.find(e=>e.id===id);
 const occ=tb=>tb.seats.filter(Boolean).length;
 
@@ -686,11 +706,11 @@ const trainCost=(st,k)=>pr(800*Math.pow(2.4,st[k]-1));
 const STAFF_SPEED=1.5; // スタッフ(メンバー・ホール)の移動速度の倍率
 // スタミナ:仕事をするたびに減り、0になったら休憩室で休む(体力のステータスが高いほど多い)
 const stamMax=st=>8+4*(st.sta||1);
-function useStam(e,n){const st=e&&e.st;if(!st||e.type==='boss')return;if(st.stam==null)st.stam=stamMax(st);st.stam=Math.max(0,st.stam-n);}
+function useStam(e,n){const st=e&&e.st;if(!st||e.type==='boss')return;if(st.stam==null)st.stam=stamMax(st);st.stam=Math.max(0,st.stam-n*cfx('stam'));}
 const tired=e=>e.st&&e.st.stam!=null&&e.st.stam<=0;
 const spdMul=e=>e.st?(0.7+0.12*e.st.spd)*STAFF_SPEED:1;
 const cookMul=e=>e.st?1.3-0.12*e.st.cook:1;
-const custPat=e=>CT[e.ctype].pat+(e.reg!=null?hearts(S.regs[e.reg])*10:0);
+const custPat=e=>CT[e.ctype].pat*(e.ctype==='s'?cfx('sPat'):1)+(e.reg!=null?hearts(S.regs[e.reg])*10:0);
 function spawn(){
   const type=pickType(HOURS[hourNow()][1]);
   if(isSet()){
@@ -742,7 +762,7 @@ function move(e,dt){
     if(L<=d){e.x=p.x;e.y=p.y;e.path.shift();d-=L;}else{e.x+=dx/L*d;e.y+=dy/L*d;e.dir=Math.atan2(dy,dx);d=0;}}
   if(e.moving&&!e.path.length){e.moving=false;arrive(e);}
 }
-function earn(v,x,y,c,icon){if(v<=0)return;S.money+=v;S.total+=v;S.dayEarn+=v;S.storeEarn+=v;incomeLog.push({t:Date.now(),v});floats.push({x,y,text:(icon||'')+'+¥'+fmt(v),t:0,c:c||'#ffe08a'});}
+function earn(v,x,y,c,icon){if(v<=0)return;S.money+=v;S.total+=v;S.dayEarn+=v;S.storeEarn+=v;incomeLog.push({t:Date.now(),v});if(BG)bgLog.push({t:Date.now(),v,i:bgIdx});floats.push({x,y,text:(icon||'')+'+¥'+fmt(v),t:0,c:c||'#ffe08a'});}
 function burst(x,y,n,cols){for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,sp=40+Math.random()*120;
   parts.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:.6+Math.random()*.7,max:1.3,c:cols[i%cols.length],s:1.5+Math.random()*2.5});}}
 
@@ -752,11 +772,11 @@ const PLAN_MEAN={s:3.8,w:2.8,g:3.3}; // 閉店で打ち切られる分を見込�
 function planGames(t){return Math.max(1,Math.round(PLAN_MEAN[t]+(rnd(-1.6,1.6)+rnd(-1.6,1.6))/2));}
 function placeOrder(c,k){c.orders=c.orders||[];if(c.orders.some(o=>o.k===k))return;const T=CT[c.ctype];
   const o={tb:c.table,id:c.id,k,icon:k==='food'?T.fi:T.di,at:gt};c.orders.push(o);orders.push(o);}
-function rollOrders(c,m){if(c.type!=='cust'||!c.table)return;const T=CT[c.ctype];
+function rollOrders(c,m){if(c.type!=='cust'||!c.table)return;const T=CT[c.ctype];m*=cfx('order');
   if(S.drink&&!isSet()&&Math.random()<T.dr*m)placeOrder(c,'drink');if(S.food&&Math.random()<T.fd*m)placeOrder(c,'food');}
 function startGame(tb){
   tb.state='play';tb.t=0;tb.pend=[];let f=1;tb.seats.map(byId).forEach(m=>{if(isCrew(m))f*=1-0.04*(m.st.mj-1);});
-  tb.dur=TIERS[tierOf(tb)].dur*f;const dur=tb.dur;
+  tb.dur=TIERS[tierOf(tb)].dur*f*cfx('dur');const dur=tb.dur;
   tb.seats.map(byId).forEach(c=>{if(c&&c.type==='cust'&&c.games>0&&!(c.orders||[]).length)rollOrders(c,.25);});
 }
 // 頼んだものがまだ届いていない客は、受け取ってから帰る(最大15秒待つ)
@@ -766,7 +786,7 @@ const canServe=(c,o)=>c&&(c.orders||[]).includes(o)&&c.table===o.tb&&c.state==='
 function endGame(tb){
   const s=SLOTS[tb.slot];S.games++;tb.state='open';tb.t=0;tb.pend=[];addRep(tb.dirt>.5?-.01:.005);
   tb.dirt=Math.min(1,tb.dirt+(S.modes[tb.slot]==='set'?.04:.08));
-  if(Math.random()<TIERS[tierOf(tb)].yk)yakuman(tb);
+  if(Math.random()<TIERS[tierOf(tb)].yk*cfx('yk'))yakuman(tb);
   const list=tb.seats.map(byId).filter(Boolean);
   const brk=!tb.manual&&S.tiers[tb.slot]>=1&&Math.random()<brkRate(S.tiers[tb.slot]);
   if(S.modes[tb.slot]==='set'){
@@ -777,7 +797,7 @@ function endGame(tb){
     tb.waitSince=gt;if(brk)breakTable(tb);return;
   }
   let sum=0;const per=feePer(tb);
-  list.forEach(e=>{if(e.type!=='cust')return;let f=per;if(e.reg!=null){f=Math.round(per*(1+0.1*hearts(S.regs[e.reg])));S.regs[e.reg]++;addRep(.01);}sum+=f;});
+  list.forEach(e=>{if(e.type!=='cust')return;let f=per;if(e.reg!=null){f=Math.round(per*(1+0.1*hearts(S.regs[e.reg])));S.regs[e.reg]+=Math.random()<cfx('reg',0)?2:1;addRep(.01);}sum+=f;});
   let charmB=0;list.forEach(m=>{if(isCrew(m)){charmB+=0.03*m.st.charm;addRep(0.002*(m.st.mj-2));gainXp(m,'mj',3);gainXp(m,'charm',1);useStam(m,2);}});
   earn(sum,s.x,s.y-8);
   if(brk){list.forEach(e=>{e.orders=[];if(isCrew(e)){goHome(e);return;}if(S.closing){leave(e);return;}
@@ -800,6 +820,7 @@ function endGame(tb){
 let bonusT=0,bonusAmt=0;
 function yakuman(tb){playScene('first_yakuman');
   const s=SLOTS[tb.slot],name=YAKU[Math.random()*YAKU.length|0],amt=feePer(tb)*4*8;
+  if(BG){S.yaku++;earn(amt,s.x,s.y-26,'#ffd35a');return;}
   S.yaku++;earn(amt,s.x,s.y-26,'#ffd35a');burst(s.x,s.y,70,['#ffd35a','#ffffff','#ff6b6b','#7fd1ff']);shake=.45;
   document.getElementById('ykBig').textContent='役満!';document.getElementById('ykName').textContent=name;document.getElementById('ykBonus').textContent='役満ボーナス +¥'+fmt(amt);
   const yk=document.getElementById('yk');yk.classList.remove('show');void yk.offsetWidth;yk.classList.add('show');
@@ -814,7 +835,7 @@ document.getElementById('bonus').onclick=()=>{const amt=bonusAmt;bonusT=0;docume
 const brkRate=t=>(t===1?.015:t===2?.008:0)*(S.maint?.5:1); // 全自動卓が半荘1回ごとに故障する確率
 const brkTxt=t=>brkRate(t)?+(brkRate(t)*100).toFixed(2)+'%':'なし';
 const repairCost=i=>pr((S.tiers[i]===1?600:2500)*Math.pow(1.15,i));
-function breakTable(tb){playScene('first_break');tb.broken=true;tb.manual=false;shake=.2;burst(SLOTS[tb.slot].x,SLOTS[tb.slot].y,14,['#888','#bbb','#555']);
+function breakTable(tb){if(BG&&!bgBreaks.some(b=>b.i===bgIdx&&b.slot===tb.slot))bgBreaks.push({i:bgIdx,slot:tb.slot});playScene('first_break');tb.broken=true;tb.manual=false;if(!BG)shake=.2;burst(SLOTS[tb.slot].x,SLOTS[tb.slot].y,14,['#888','#bbb','#555']);
   toast(`${tb.slot+1}番卓が故障しました。卓をタップして対応を選べます`);}
 function fixTable(tb){tb.broken=false;tb.manual=false;tb.repairing=false;S.repairs++;const s=SLOTS[tb.slot];burst(s.x,s.y,24,['#7fe0ff','#ffffff']);toast(`${tb.slot+1}番卓が直りました`);}
 function callTech(tb){tb.repairing=true;const s=SLOTS[tb.slot];
@@ -867,18 +888,57 @@ function drawGoal(){const g=ST().goal,el=document.getElementById('goal');
 function openStoreMenu(){const n=STAGES[nextStage()];if(!n)return;const oc=n.open,short=S.money<oc;
   mcard.innerHTML=`<h2>${n.no}号店を出店</h2><p>${n.area}の${n.place}に新しい店を出します。場代は1号店の${n.fee}倍ですが、設備や人件費などの物価は${n.cost}倍の街です。卓は最大${n.max}卓です。</p>
     <p style="font-weight:700;color:var(--ink)">出店費用 ¥${fmt(oc)}(所持金 ¥${fmt(S.money)})</p>
-    <p>新しい店に持っていくのは所持金だけです。スタッフと常連はいまの店に残り、いまの店はそのまま営業を続けます。見ていない店には、最高の売上ペースの1割が入ってきます。</p>
+    <p>新しい店に持っていくのは所持金だけです。スタッフと常連はいまの店に残り、いまの店はそのまま営業を続けます。見ていない店もスタッフだけで営業を続け、売上はそのまま入ります。</p>
     <p>お店タブから、いつでも店を切り替えられます。</p>
     <button class="mbtn pri" id="soGo" ${short?'disabled':''}>${short?`あと ¥${fmt(oc-S.money)} 貯めると出店できます`:'出店費用を払って出店する'}</button><button class="mbtn sec" id="soX">まだ出店しない</button>`;
   modal.classList.add('show');
   document.getElementById('soX').onclick=()=>modal.classList.remove('show');
   document.getElementById('soGo').onclick=()=>{if(S.money<oc)return;modal.classList.remove('show');newStore();};}
+// 店を離れても店内はそのまま残して裏で営業を続け、戻ったら続きから表示する。店長(プレイヤー)だけが移動する
 function switchShop(i,quiet){if(i===S.active||!S.shops[i])return;
-  S.tb=tables.map(t=>({d:+t.dirt.toFixed(2),b:t.broken?1:0,m:t.manual?1:0}));S.shops[S.active]=snapShop(S);
-  Object.assign(S,JSON.parse(JSON.stringify(S.shops[i])));S.active=i;REG=REGS[S.stage];
-  incomeLog=[];playTime=0;orders=[];applyLayout();initWorld();save();renderTab();document.getElementById('goal')._k=null;
+  removeBoss();S.tb=tables.map(t=>({d:+t.dirt.toFixed(2),b:t.broken?1:0,m:t.manual?1:0}));
+  const live={};SHOP_KEYS.forEach(k=>live[k]=S[k]);S.shops[S.active]=live;worlds[S.active]=capWorld(); // スタッフの参照を保つためコピーしない
+  SHOP_KEYS.forEach(k=>S[k]=S.shops[i][k]);S.active=i;REG=REGS[S.stage];
+  const w=worlds[i];delete worlds[i];
+  if(w){putWorld(w);genPlanks();fit();mkBoss();}else{applyLayout();initWorld();}
+  save();renderTab();document.getElementById('goal')._k=null;
   document.getElementById('openOv').classList.remove('show');
   if(!quiet){toast(`${shopName()}に移動しました`);if(!S.opened)prepareOpening();}}
+function capWorld(){return{ents,tables,orders,waitSeats,spawnT,floats,parts,incomeLog,playTime,noteT,closeT,wDay,L:getLayout()};}
+function putWorld(w){({ents,tables,orders,waitSeats,spawnT,floats,parts,incomeLog,playTime,noteT,closeT,wDay}=w);setLayout(w.L);}
+// 店長を店から外す(座っていた席や、受け持っていた掃除・片づけも手放す)
+function removeBoss(){const b=ents.find(e=>e.type==='boss');if(!b)return;freeSeat(b);
+  tables.forEach(t=>{if(t.cleaner===b.id)t.cleaner=null;if(t.busyBy===b.id)t.busyBy=null;});ents=ents.filter(e=>e!==b);}
+// 裏の店をdtだけ動かす。いまの店の変数を退避し、その店の変数に入れ替えてupdateを呼ぶ
+// 裏の店iの中身に入れ替えてfnを実行し、元に戻す(fnの戻り値を返す)
+function withShop(i,fn){const sh=S.shops[i],keep={};SHOP_KEYS.forEach(k=>{keep[k]=S[k];S[k]=sh[k];});const aw=capWorld(),reg=REG;
+  REG=REGS[S.stage];BG=true;bgIdx=i;
+  try{if(worlds[i])putWorld(worlds[i]);else{applyLayout(true);initWorld(true);if(S.closing===2)wDay=S.day;}return fn();}
+  finally{BG=false;worlds[i]=capWorld();SHOP_KEYS.forEach(k=>{sh[k]=S[k];S[k]=keep[k];});putWorld(aw);REG=reg;}}
+function runShop(i,dt){withShop(i,()=>{update(dt);const now=Date.now();incomeLog=incomeLog.filter(x=>now-x.t<60000);
+  if(playTime>60){S.rate=incomeLog.reduce((a,b)=>a+b.v,0)/60;S.bestRate=Math.max(S.bestRate||0,S.rate);}});}
+// 裏の店で卓が壊れたら、いまの画面のままポップアップで対応を選べる(ほかのポップアップが出ている間は待つ)
+let bgBreaks=[];
+function showBgBreak(){const {i,slot}=bgBreaks.shift();if(!S.shops[i])return;
+  if(i===S.active){if(tables[slot]&&tables[slot].broken)repairMenu(tables[slot]);return;}
+  const info=withShop(i,()=>{const tb=tables[slot];return tb&&tb.broken&&!tb.repairing?{name:shopName(),c:repairCost(slot),set:S.modes[slot]==='set'}:null;});if(!info)return;
+  const run=fn=>withShop(i,()=>{const tb=tables[slot];if(tb)fn(tb);});
+  mcard.innerHTML=`<h2>${esc(info.name)}の${slot+1}番卓が故障しました</h2>
+    <p>いま見ていない店の卓です。このままでは卓が使えないので、ここから対応を選べます。</p>
+    <button class="mbtn pri" id="bbAd">${adPre()}すぐ直す</button>
+    <button class="mbtn sec" id="bbTech" ${S.money<info.c?'disabled':''}>修理を呼ぶ ¥${fmt(info.c)}</button>
+    <button class="mbtn sec" id="bbMan">手積みでしのぐ</button>
+    <button class="mbtn sec" id="bbGo">この店へ移動する</button>
+    <button class="mbtn sec" id="bbX">あとで</button>`;
+  modal.classList.add('show');const q=id=>document.getElementById(id),close=()=>modal.classList.remove('show');
+  q('bbX').onclick=close;
+  q('bbAd').onclick=()=>{close();playAd(()=>{run(tb=>{if(tb.broken||tb.manual)fixTable(tb);});toast(`${info.name}の${slot+1}番卓が直りました`);save();});};
+  q('bbTech').onclick=()=>{if(S.money<info.c)return;S.money-=info.c;close();run(tb=>{if(tb.broken&&!tb.repairing)callTech(tb);});toast(`${info.name}に修理業者を呼びました`);save();};
+  q('bbMan').onclick=()=>{close();run(tb=>{tb.broken=false;tb.manual=true;});toast(`${info.name}の${slot+1}番卓を手積みで回します`);save();};
+  q('bbGo').onclick=()=>{close();switchShop(i);if(tables[slot]&&tables[slot].broken)repairMenu(tables[slot]);};}
+// 開店済みのほかの店を、0.1秒きざみで動かす
+function bgStep(dt){bgAcc+=dt;while(bgAcc>=.1){bgAcc-=.1;S.shops.forEach((sh,i)=>{if(i!==S.active&&sh.opened)runShop(i,.1);});}}
+const bgPerMin=()=>{const now=Date.now();bgLog=bgLog.filter(x=>now-x.t<60000);return bgLog.reduce((a,b)=>b.i===S.active?a:a+b.v,0);}; // いま見ている店の分は除く
 function newStore(){const ns=nextStage();if(!newestCleared()||ns>=STAGES.length)return;const oc=STAGES[ns].open;if(S.money<oc)return;S.money-=oc;
   S.shops.push(freshShop(ns,S));switchShop(S.shops.length-1,true);prepareOpening();}
 // セット専門店:2号店の街から、フリー店のある街にもう1店出せる
@@ -892,8 +952,12 @@ function closing(dt){
   ents.forEach(e=>{if(e.type==='cust'&&e.state!=='leaving'&&!(e.table&&e.table.state==='play'))leave(e);
     if(e.type==='pro'&&e.state!=='leaving'&&!(e.table&&e.table.state==='play'))leave(e);});
   if(closeT>40)tables.forEach(tb=>{if(tb.state==='play')tb.t=1e9;});
-  if(!ents.some(e=>e.type==='cust'||e.type==='pro'))endDay();
+  if(!BG&&!ents.some(e=>e.type==='cust'||e.type==='pro'))endDay();
 }
+// 裏の店の営業終了:その日1回だけ、残っているお客さんを帰して卓とスタッフを翌日に備える
+function bgDayEnd(){wDay=S.day;closeT=0;ents.forEach(e=>{if((e.type==='cust'||e.type==='pro')&&e.state!=='leaving')leave(e);});
+  ents.forEach(e=>{if(e.st)e.st.stam=stamMax(e.st);});tables.forEach(t=>{if(t.state==='play'){t.state='open';t.t=0;}t.dirt=0;t.cleaner=null;t.side=[[],[],[],[]];t.busy=[null,null,null,null];t.busyBy=null;});
+  ents.forEach(e=>{if(e.state==='toClean'||e.state==='cleaning'){if(e.cleanTb)e.cleanTb.cleaner=null;goHome(e);}});orders=[];}
 function endDay(){
   document.getElementById('dayT').textContent=S.day+'日目 営業終了';
   document.getElementById('dayE').textContent='¥'+fmt(S.dayEarn);
@@ -908,15 +972,15 @@ document.getElementById('nextDay').onclick=nextDay;
 
 // ---------- update ----------
 function update(dt){
-  gt+=dt;playTime+=dt;updateOutside(dt);
+  if(!BG){gt+=dt;updateOutside(dt);}playTime+=dt; // 裏の店は時刻(gt)と外の通行人を進めない
   // チュートリアル中は時間を止める:時計・半荘は進まず(卓はタップした分だけ進む)、お金も操作しないと増えない
   const tutOn=S.tut>0;
   if(S.stage===0&&!S.drink&&!(S.story||{}).drink_hint&&S.tut<=0&&S.money>=pr(250))playScene('drink_hint',()=>{if(!S.drink){S.guide='drink';save();}});
   if(S.stage===1&&S.storeEarn>=ST().goal.earn*.25)playScene('pro_meet');
-  const bg=tutOn?0:bgIncome();if(bg>0){chainAcc+=bg*dt;if(chainAcc>=1){const v=Math.floor(chainAcc);chainAcc-=v;S.money+=v;S.total+=v;}}
-  checkGoal();
-  if(S.closing===2){if(dayCardT>0){dayCardT-=dt;document.getElementById('dayCount').textContent=Math.ceil(Math.max(0,dayCardT))+'秒後に自動で次の日へ進みます';if(dayCardT<=0)nextDay();}}
-  else if(!S.closing){if(!tutOn)S.clock+=dt*MINPS;if(S.clock>=1440){S.clock=1440;S.closing=1;closeT=0;toast('閉店時間です。いまの半荘で終わりにします');}}
+  if(!BG)checkGoal();
+  if(S.closing===2&&BG){if(wDay!==S.day)bgDayEnd();}
+  else if(S.closing===2){if(dayCardT>0){dayCardT-=dt;document.getElementById('dayCount').textContent=Math.ceil(Math.max(0,dayCardT))+'秒後に自動で次の日へ進みます';if(dayCardT<=0)nextDay();}}
+  else if(!S.closing){if(BG){}else{if(!tutOn)S.clock+=dt*MINPS;if(S.clock>=1440){S.clock=1440;S.closing=1;closeT=0;toast('閉店時間です。いまの半荘で終わりにします');}}}
   else closing(dt);
   // 待合室から卓へ
   ents.filter(e=>e.state==='waiting').sort((a,b)=>a.waitOrder-b.waitOrder).forEach(e=>{
@@ -935,7 +999,7 @@ function update(dt){
   if(pro){
     if(!proOn()&&pro.state!=='leaving'&&!(pro.table&&pro.table.state==='play'))leave(pro,'またね');
     else if(pro.state==='standby'){const tb=openTable(null);if(tb)sendToSeat(pro,tb,freeIdx(tb));}
-  }else if(proOn()&&!S.closing)mkPro();
+  }else if(proOn()&&!S.closing&&!BG)mkPro();
   tables.forEach(tb=>{
     const T=TIERS[tierOf(tb)];
     if(tb.broken){if(Math.random()<dt*3)parts.push({x:SLOTS[tb.slot].x+rnd(-10,10),y:SLOTS[tb.slot].y,vx:rnd(-6,6),vy:-18,life:1.2,max:1.4,c:'rgba(160,160,160,.6)',s:4});return;}
@@ -960,7 +1024,7 @@ function update(dt){
         if(e.type==='hall'){e.state='returning';route(e,HALLHOME.x,HALLHOME.y,HOMEY);}else{e.state='returning';const h=home(e.idx);route(e,h.x,h.y,HOMEY);}}}
     else if(e.state==='idle'){if(tired(e))goRest(e);else e.st.stam=Math.min(stamMax(e.st),e.st.stam+stamMax(e.st)/100*dt);}});
   // 退職予約の実行
-  ents.filter(e=>e.st&&e.st.quitting).forEach(e=>{
+  if(!BG)ents.filter(e=>e.st&&e.st.quitting).forEach(e=>{
     if(e.state==='idle'){const role=e.type==='hall'?'hall':'member';doDismiss({m:e.st,role});}else releaseIfWaiting(e);});
   // 注文の提供(ホールスタッフと、卓に入っていないメンバー)
   ents.filter(e=>e.type==='hall').concat(ents.filter(e=>e.type==='staff'),ents.filter(e=>e.type==='boss')).forEach(e=>{
@@ -996,9 +1060,10 @@ function update(dt){
       if(Math.random()<dt*6)burst(s.x+rnd(-12,12),s.y+rnd(-12,12),2,['#ffe27a','#ffffff']);
       if(e.timer<=0){fixTable(e.tb);leave(e);}}
   });
-  if(dg('speaker')){noteT-=dt;if(noteT<=0){noteT=1.6/dg('speaker');const sp=[[16,158],[W-18,372],[16,308],[W-18,158]].slice(0,dg('speaker')>=3?4:2);const p=pick(sp);floats.push({x:p[0],y:p[1],text:'♪',t:0,c:'#ffffff',small:1});}}
+  if(bgmOn()&&!BG){noteT-=dt;if(noteT<=0){noteT=1.6;const p=pick(speakers());floats.push({x:p[0]<W/2?p[0]+12:p[0]-5,y:p[1]+8,text:'♪',t:0,c:'#ffffff',small:1});}} // BGMが流れている間はスピーカーから音符
   floats.forEach(f=>f.t+=dt);floats=floats.filter(f=>f.t<1.4);
   parts.forEach(p=>{p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=.96;p.vy=p.vy*.96+30*dt;p.life-=dt;});parts=parts.filter(p=>p.life>0);
+  if(BG)return;
   if(shake>0)shake-=dt;
   if(bonusT>0){bonusT-=dt;if(bonusT<=0)document.getElementById('bonus').style.display='none';}
 }
@@ -1077,14 +1142,13 @@ function drawFloor(){
   // 内装小物
   const pl=[[W-16,248],[12,364],[W-16,CY]];for(let i=0;i<dg('plant');i++){const[x,y]=pl[i];ctx.save();ctx.translate(x,y);const sc=dg('plant')>=3?1.3:1;ctx.scale(sc,sc);ctx.translate(-x,-y);
     ctx.fillStyle='#5a3a22';ctx.beginPath();ctx.arc(x,y,7,0,7);ctx.fill();ctx.fillStyle='#2f8a4a';for(let a=0;a<6;a++){ctx.beginPath();ctx.ellipse(x+Math.cos(a)*6,y+Math.sin(a)*6,6,3,a,0,7);ctx.fill();}ctx.restore();}
-  if(dg('clock')===1){ctx.fillStyle='#f4f1e8';ctx.beginPath();ctx.arc(182,6,6,0,7);ctx.fill();ctx.strokeStyle='#222';ctx.lineWidth=1;ctx.stroke();
-    ctx.beginPath();ctx.moveTo(182,6);ctx.lineTo(182+Math.cos(gt*.5)*4,6+Math.sin(gt*.5)*4);ctx.stroke();}
-  else if(dg('clock')===2){ctx.fillStyle='#6b4428';rr(174,2,16,22,3);ctx.fill();ctx.fillStyle='#f4f1e8';ctx.beginPath();ctx.arc(182,9,5,0,7);ctx.fill();
-    ctx.strokeStyle='#c8a04a';ctx.lineWidth=1;ctx.beginPath();const sw=Math.sin(gt*3)*3;ctx.moveTo(182,14);ctx.lineTo(182+sw,21);ctx.stroke();ctx.fillStyle='#c8a04a';ctx.beginPath();ctx.arc(182+sw,21,1.8,0,7);ctx.fill();}
-  else if(dg('clock')>=3){ctx.fillStyle='#111';rr(164,2,36,12,2);ctx.fill();const cm=Math.floor(Math.min(S.clock,1439));
-    label(String(Math.floor(cm/60)).padStart(2,'0')+':'+String(cm%60).padStart(2,'0'),182,8.5,8,'#63ff9a');}
-  if(dg('speaker')){const sz=dg('speaker')>=2?1.4:1,sp=[[4,150],[W-13,364]].concat(dg('speaker')>=3?[[4,300],[W-13,150]]:[]);
-    sp.forEach(([x,y])=>{ctx.fillStyle='#111';rr(x,y,9,14*sz,2);ctx.fill();ctx.fillStyle='#555';ctx.beginPath();ctx.arc(x+4.5,y+7*sz,3,0,7);ctx.fill();});}
+  // 壁掛け時計(常設):針は営業時間の時刻を指す
+  {const cm=Math.min(S.clock,1439),ha=(cm/60%12)/12*Math.PI*2-Math.PI/2,ma=(cm%60)/60*Math.PI*2-Math.PI/2;
+    ctx.fillStyle='#f4f1e8';ctx.beginPath();ctx.arc(182,7,6.5,0,7);ctx.fill();ctx.strokeStyle='#3a2a1a';ctx.lineWidth=1.4;ctx.stroke();
+    ctx.strokeStyle='#222';ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(182,7);ctx.lineTo(182+Math.cos(ha)*3.2,7+Math.sin(ha)*3.2);ctx.stroke();
+    ctx.lineWidth=.8;ctx.beginPath();ctx.moveTo(182,7);ctx.lineTo(182+Math.cos(ma)*5,7+Math.sin(ma)*5);ctx.stroke();}
+  // BGMスピーカー(常設、店内2か所)
+  speakers().forEach(([x,y])=>{ctx.fillStyle='#111';rr(x,y,9,14,2);ctx.fill();ctx.fillStyle='#555';ctx.beginPath();ctx.arc(x+4.5,y+7,3,0,7);ctx.fill();});
   if(dg('purifier')){const big=dg('purifier')>=2,u=[[W-28,118]].concat(dg('purifier')>=3?[[8,236]]:[]);
     u.forEach(([x,y])=>{const w=big?18:14;ctx.fillStyle='#f2f4f5';rr(x-(w-14),y,w,w,3);ctx.fill();ctx.fillStyle=`rgba(90,180,255,${.6+.4*Math.sin(gt*2)})`;ctx.fillRect(x-(w-14)+3,y+3,w-6,2);});}
   if(dg('art')){const fr=dg('art')>=2?'#e0b44a':'#8a5a34',hh=dg('art')>=2?56:36;
@@ -1360,17 +1424,18 @@ function tabRows(){
 let tab='table',rows=[];
 function renderTab(){
   const L=document.getElementById('list');L.innerHTML='';rows=[];
-  if(tab==='shop'){L.innerHTML=`<div class="sec">営業成績</div><div class="stat"><span>ほかの店からの収入</span><b>¥${fmt(bgIncome()*60)}/分</b></div><div class="stat"><span>累計売上</span><b id="st-total"></b></div>
+  if(tab==='shop'){L.innerHTML=`<div class="sec">営業成績</div><div class="stat"><span>ほかの店からの収入</span><b id="st-bg"></b></div><div class="stat"><span>累計売上</span><b id="st-total"></b></div>
     <div class="stat"><span>営業日数</span><b id="st-day"></b></div><div class="stat"><span>半荘数</span><b id="st-games"></b></div><div class="stat"><span>役満</span><b id="st-yaku"></b></div>
     <div class="stat"><span>提供したドリンク・フード</span><b id="st-served"></b></div>
     <div class="stat"><span>掃除した回数</span><b id="st-clean"></b></div><div class="stat"><span>修理した回数</span><b id="st-rep"></b></div><div class="stat"><span>満席で帰ったお客さん</span><b id="st-lost"></b></div>
     <div class="stat"><span>来店ペース(内装)</span><b id="st-pace"></b></div>
+    <div class="note">着せ替えの効果:${Object.keys(COS).map(c=>cosItem(c).fxt).filter(Boolean).join('、')||'なし(ショップで着せ替えを選べます)'}</div>
     <div class="note">汚れた卓はお客さんに避けられ、評判も下がります。全自動卓は時々故障するので、店内の卓をタップして対応してください。お店を離れている間も売上が貯まります(店長代行で最大12時間分まで延ばせます)。プレイ中の卓をタップすると、半荘が少し早く進みます。</div>
     <div class="sec">設定</div><div class="row"><div><div class="nm">効果音</div><div class="ds">タップしたときのクリック音</div></div><button class="buy" id="seBtn">${seOn?'オン':'オフ'}</button></div>
     <div class="sec">データ</div><div class="row"><div><div class="nm">データをリセット</div><div class="ds">最初からやり直します</div></div><button class="buy" id="resetBtn">リセット</button></div>`;
     document.getElementById('seBtn').onclick=e=>{seOn=!seOn;try{localStorage.setItem('jansou-se',seOn?'1':'0');}catch(_){}e.target.textContent=seOn?'オン':'オフ';if(seOn)clickSound();};
     let armed=false;document.getElementById('resetBtn').onclick=e=>{if(!armed){armed=true;e.target.textContent='もう一度押す';setTimeout(()=>{armed=false;e.target.textContent='リセット';},3000);return;}
-      const iap=S.iap;try{localStorage.removeItem(KEY);}catch(_){}S=fresh();S.iap=iap;/* 課金した内容はリセットしても残す */REG=REGS[0];applyLayout();initWorld();renderTab();setPre();playScene('prologue',()=>openMap('start'));toast('リセットしました');};
+      const iap=S.iap;try{localStorage.removeItem(KEY);}catch(_){}S=fresh();S.iap=iap;/* 課金した内容はリセットしても残す */REG=REGS[0];Object.keys(worlds).forEach(k=>delete worlds[k]);bgLog=[];bgBreaks=[];applyLayout();initWorld();renderTab();setPre();playScene('prologue',()=>openMap('start'));toast('リセットしました');};
     refresh();return;}
   if(tab==='staff'){addSec(L,'店長');{const d=document.createElement('div');d.className='row';L.appendChild(d);
       d.innerHTML=`<div><div class="nm">${esc(bossLabel())}<small>あなた</small><small class="sst"></small></div><div class="ds">手が空いていればスタッフと同じ仕事を自動でこなします。注文、器の残ったサイドテーブル、汚れた卓、3人待っている卓をタップすると、その仕事を優先します。スタミナはありません</div><div class="stw">${statHTML(S.boss,1)}</div></div><div class="btns"><button class="alt tr" type="button">研修</button><button class="alt nmb" type="button">名前</button></div>`;
@@ -1462,10 +1527,10 @@ function refresh(){
     else if(r.u.iap){r.btn.textContent='課金 '+r.u.iap()+'円';r.btn.disabled=false;}
     else{const c=pr(r.u.cost());r.btn.textContent='¥'+fmt(c);r.btn.disabled=S.money<c;}});
   if(tab==='shop'){const q=id=>document.getElementById(id);if(q('st-total')){q('st-total').textContent='¥'+fmt(S.total);q('st-day').textContent=S.day+'日目';q('st-clean').textContent=fmt(S.cleans)+'回';q('st-rep').textContent=fmt(S.repairs)+'回';q('st-games').textContent=fmt(S.games);
-    q('st-yaku').textContent=fmt(S.yaku)+'回';q('st-served').textContent=fmt(S.served)+'品';q('st-lost').textContent=fmt(S.lost)+'人';q('st-pace').textContent='+'+Math.round(decoBonus()*100)+'%';}}
+    q('st-yaku').textContent=fmt(S.yaku)+'回';q('st-served').textContent=fmt(S.served)+'品';q('st-lost').textContent=fmt(S.lost)+'人';q('st-pace').textContent='+'+Math.round(decoBonus()*100)+'%';q('st-bg').textContent='¥'+fmt(bgPerMin())+'/分';}}
   const now=Date.now();incomeLog=incomeLog.filter(x=>now-x.t<60000);const pm=incomeLog.reduce((a,b)=>a+b.v,0);
-  document.getElementById('rate').textContent=`¥${fmt(pm)}/分${bgIncome()>0?` +${fmt(bgIncome()*60)}`:''}  ★${S.rep.toFixed(1)}`;
-  document.getElementById('rate').title=`売上 ¥${fmt(pm)}/分、ほかの店から ¥${fmt(bgIncome()*60)}/分、評判 ★${S.rep.toFixed(1)}`;
+  const bm=bgPerMin();document.getElementById('rate').textContent=`¥${fmt(pm)}/分${bm>0?` +${fmt(bm)}`:''}  ★${S.rep.toFixed(1)}`;
+  document.getElementById('rate').title=`売上 ¥${fmt(pm)}/分、ほかの店から ¥${fmt(bm)}/分、評判 ★${S.rep.toFixed(1)}`;
   drawGoal();
   const cm=Math.floor(Math.min(S.clock,1439.99));document.getElementById('shopLine').textContent=
     `${shopName()}  ${S.day}日目 ${S.closing===2?'営業終了':S.closing?'閉店作業中':String(Math.floor(cm/60)).padStart(2,'0')+':'+String(cm%60).padStart(2,'0')}`;
@@ -1512,7 +1577,7 @@ function clickSound(){if(!seOn)return;try{seCtx=seCtx||new (window.AudioContext|
   o.connect(g);g.connect(seCtx.destination);o.start(t);o.stop(t+.08);}catch(_){}}
 // ボタン・店内・マップのピン・会話送りをタップしたら鳴らす(押せないボタンでは鳴らさない)
 document.addEventListener('pointerdown',e=>{const el=e.target.closest&&e.target.closest('button,[role="button"],canvas,#story');if(!el||el.disabled)return;clickSound();},true);
-let toastTimer;function toast(m){const t=document.getElementById('toast');t.textContent=m;t.style.opacity=1;clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.style.opacity=0,1800);}
+let toastTimer;function toast(m){if(BG)return;const t=document.getElementById('toast');t.textContent=m;t.style.opacity=1;clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.style.opacity=0,1800);}
 const modal=document.getElementById('modal'),mcard=document.getElementById('mcard');
 function playAd(cb){if(noAds()){cb();return;}let n=3;modal.classList.add('show');
   const dr=()=>{mcard.innerHTML=`<h2>広告を再生しています</h2><p>プロトタイプ用のダミー広告です。実装時はAdMobのリワード広告に置き換えます。</p><div class="count">${n}</div>`;};
@@ -1526,8 +1591,12 @@ function playPurchase(name,yen,cb){modal.classList.add('show');
 const iapEl=document.getElementById('iap'),iapBody=document.getElementById('iapBody'),spdBtn=document.getElementById('spdBtn');
 function thanks(msg){mcard.innerHTML=`<h2>お買い上げありがとうございます</h2><p>${msg}</p><button class="mbtn pri" id="tyOk">OK</button>`;
   modal.classList.add('show');document.getElementById('tyOk').onclick=()=>modal.classList.remove('show');}
-function updSpd(){spdBtn.classList.toggle('show',!!S.iap.speed);const m=gameSpeed();spdBtn.textContent='▶▶ ×'+m;spdBtn.classList.toggle('fast',m>1);}
-spdBtn.onclick=()=>{const i=SPEEDS.indexOf(gameSpeed());S.iap.mul=SPEEDS[(i+1)%SPEEDS.length];save();updSpd();toast(`営業の速さを×${S.iap.mul}にしました`);};
+// 倍速ボタンはいつも表示。倍速モードを買っていなければ鍵付きで、押すと倍速モードの購入画面を出す
+const LOCK_SVG='<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><rect x="3" y="7" width="10" height="7.5" rx="1.5" fill="currentColor"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>';
+function updSpd(){const own=!!S.iap.speed,m=gameSpeed();spdBtn.innerHTML=(own?'':LOCK_SVG)+'▶▶ ×'+m;spdBtn.classList.toggle('lock',!own);spdBtn.classList.toggle('fast',m>1);
+  spdBtn.setAttribute('aria-label',own?`営業の速さ ×${m}(タップで切り替え)`:'倍速モード(ショップで購入すると使えます)');}
+function openShop(focus){renderShop();iapEl.classList.add('show');const t=focus&&iapBody.querySelector(focus);if(t)t.scrollIntoView({block:'center'});else iapBody.scrollTop=0;}
+spdBtn.onclick=()=>{if(!S.iap.speed){buyIap('speed');return;}const i=SPEEDS.indexOf(gameSpeed());S.iap.mul=SPEEDS[(i+1)%SPEEDS.length];save();updSpd();toast(`営業の速さを×${S.iap.mul}にしました`);};
 function swatch(cat,it){
   if(cat==='uniform')return`<div class="sw" style="background:#6b4a30"><i style="width:22px;height:34px;border-radius:11px;background:${it.body};display:flex;justify-content:center"><i style="width:6px;height:34px;background:${it.vest}"></i></i><i style="width:6px;height:8px;background:${it.tie}"></i></div>`;
   if(cat==='mat')return`<div class="sw" style="background:${it.c};box-shadow:inset 0 0 0 5px #8a5a34"></div>`;
@@ -1540,6 +1609,10 @@ function renderShop(){
   if(!S.iap.starter)h+=`<div class="iap-pack"><span class="tag">1回かぎり</span><h3>スターターパック</h3><div class="ds">これからお店を広げる方へのお得なセットです</div>
     <ul><li>開業資金 ¥${fmt(Math.round(STARTER_MONEY*CM()))}</li><li>いまの店の店長代行を1段階アップ${mMax?'(最大のため資金に上乗せ)':''}</li><li>スタッフの制服「ひだまり法被」</li></ul>
     <button class="buy" type="button" data-buy="starter">${IAP.starter.yen}円</button></div>`;
+  if(BUNDLE.every(k=>!S.iap[k])){const sum=BUNDLE.reduce((a,k)=>a+IAP[k].yen,0);
+    h+=`<div class="iap-pack"><span class="tag">${sum-IAP.bundle.yen}円おトク</span><h3>${IAP.bundle.name}</h3><div class="ds">便利な機能3つをまとめて。別々に買うと${sum}円です</div>
+    <ul>${BUNDLE.map(k=>`<li>${IAP[k].name}</li>`).join('')}</ul>
+    <button class="buy" type="button" data-buy="bundle">${IAP.bundle.yen}円</button></div>`;}
   h+='<div class="sec">便利な機能</div>';
   h+=row(IAP.noAds.name,'','広告を見る代わりに、すぐに報酬を受け取れます(役満ボーナス、すぐ直す、候補の入れ替え、プロ来店、留守中の2倍)',bb('noAds'));
   h+=row(IAP.speed.name,'','営業の進みを×1.5、×2に切り替えられます。店内の左上のボタンでも切り替えられます',bb('speed'),
@@ -1550,25 +1623,72 @@ function renderShop(){
   Object.keys(COS).forEach(cat=>{const C=COS[cat],wear=cosItem(cat).k;
     h+=`<div class="sec">着せ替え:${C.name}</div><div class="cos-grid">${C.items.map(it=>{const own=hasCos(cat,it.k),on=wear===it.k;
       const b=on?'<button class="buy" type="button" disabled>使用中</button>':own?`<button class="buy eq" type="button" data-wear="${cat}:${it.k}">使う</button>`:`<button class="buy" type="button" data-cos="${cat}:${it.k}">${it.yen}円</button>`;
-      return`<div class="cos${on?' on':''}">${swatch(cat,it)}<b>${it.n}</b>${b}</div>`;}).join('')}</div>`;});
-  h+='<div class="note">着せ替えは見た目だけが変わります。購入した内容は全店共通で、データをリセットしても残ります。</div>';
+      return`<div class="cos${on?' on':''}">${swatch(cat,it)}<b>${it.n}</b><span class="fx">${it.fxt||'効果なし'}</span>${b}</div>`;}).join('')}</div>`;});
+  h+='<div class="note">着せ替えは種類ごとに1つ身に付けられ、身に付けているものの効果が全店で効きます。購入した内容は全店共通で、データをリセットしても残ります。</div>';
   iapBody.innerHTML=h;}
-iapBody.onclick=e=>{const b=e.target.closest('button');if(!b||b.disabled)return;const d=b.dataset;
-  const after=msg=>{save();renderShop();updSpd();renderTab();thanks(msg);};
-  if(d.buy){const k=d.buy;playPurchase(IAP[k].name,IAP[k].yen,()=>{S.iap[k]=1;
+// 購入後の共通処理:保存して画面を更新し、お礼を出す
+function after(msg){save();renderShop();updSpd();renderTab();thanks(msg);}
+function buyIap(k){playPurchase(IAP[k].name,IAP[k].yen,()=>{S.iap[k]=1;
     if(k==='starter'){let money=Math.round(STARTER_MONEY*CM());if((S.mgr||0)<OFFCAP.length-1)S.mgr=(S.mgr||0)+1;else money*=2;S.money+=money;S.iap.own['uniform:happi']=1;S.iap.wear.uniform='happi';
       after(`資金 ¥${fmt(money)}と、スタッフの制服「ひだまり法被」を受け取りました`);}
+    else if(k==='bundle'){BUNDLE.forEach(b=>S.iap[b]=1);S.iap.mul=2;after('倍速モード、広告スキップ、留守番ブーストが使えるようになりました。速さは店内の左上のボタンで切り替えられます');}
     else if(k==='speed'){S.iap.mul=2;after('営業が×2で進みます。店内の左上のボタンで速さを切り替えられます');}
     else if(k==='noAds')after('これからは広告を見ずに、すぐ報酬を受け取れます');
     else after(`留守中の売上が${Math.round(OFF_EFF_PLUS*100)}%になりました`);});}
+iapBody.onclick=e=>{const b=e.target.closest('button');if(!b||b.disabled)return;const d=b.dataset;
+  if(d.buy)buyIap(d.buy);
   else if(d.mgr){const lv=S.mgr||0;if(lv>=OFFCAP.length-1)return;playPurchase('店長代行',MGR_IAP[lv],()=>{S.mgr=lv+1;after(`留守中に${OFFCAP[S.mgr]}時間分まで営業できるようになりました`);});}
   else if(d.spd){S.iap.mul=+d.spd;save();renderShop();updSpd();}
-  else if(d.wear){const[cat,k]=d.wear.split(':');S.iap.wear[cat]=k;save();renderShop();}
+  else if(d.wear){const[cat,k]=d.wear.split(':');S.iap.wear[cat]=k;save();renderShop();renderTab();}
   else if(d.cos){const[cat,k]=d.cos.split(':'),it=COS[cat].items.find(i=>i.k===k);
     playPurchase(`${COS[cat].name}「${it.n}」`,it.yen,()=>{S.iap.own[cat+':'+k]=1;S.iap.wear[cat]=k;after(`「${it.n}」を使っています。ショップでいつでも切り替えられます`);});}};
-document.getElementById('shopOpen').onclick=()=>{renderShop();iapBody.scrollTop=0;iapEl.classList.add('show');};
+document.getElementById('shopOpen').onclick=()=>openShop();
 document.getElementById('iapClose').onclick=()=>iapEl.classList.remove('show');
 updSpd();
+// ---------- BGM ----------
+// 音源ファイルは使わず、Web Audioでその場で鳴らす(王道進行の8小節ループ、BPM84)。
+// ブラウザは操作前に音を出せないので、最初のタップで鳴らし始める。オン/オフはS.bgmに保存(全店共通)
+const BGM={bpm:84,
+  // 1小節ごと:[ベースの根音, 和音, メロディ[[拍, 音, 長さ(拍)]...]](音はMIDI番号)
+  bars:[[41,[53,57,60,64],[[0,72,1],[1,69,.5],[1.5,67,.5],[2,69,1.5]]],
+    [43,[55,59,62,65],[[0,71,.5],[.5,72,.5],[1,74,1],[2,71,1],[3,67,1]]],
+    [40,[52,55,59,62],[[0,67,1],[1,71,.5],[1.5,74,.5],[2,76,1.5],[3.5,74,.5]]],
+    [45,[55,60,64,67],[[0,72,1.5],[1.5,69,.5],[2,67,2]]],
+    [38,[53,57,60,62],[[0,69,.5],[.5,72,.5],[1,74,1],[2,77,1],[3,76,.5],[3.5,74,.5]]],
+    [43,[53,55,59,62],[[0,74,1],[1,71,1],[2,67,1],[3,69,.5],[3.5,71,.5]]],
+    [36,[52,55,59,60],[[0,72,2],[2,76,1],[3,79,1]]],
+    [36,[52,55,59,64],[[0,76,3]]]]};
+let actx=null,bgmGain=null,bgmTimer=null,bgmBar=0,bgmNext=0,noiseBuf=null;
+const bgmOn=()=>S.bgm!==0;
+const hz=m=>440*Math.pow(2,(m-69)/12);
+function tone(t,m,len,type,vol,cut){const o=actx.createOscillator(),g=actx.createGain();o.type=type;o.frequency.value=hz(m);
+  let out=o;if(cut){const f=actx.createBiquadFilter();f.type='lowpass';f.frequency.value=cut;o.connect(f);out=f;}
+  out.connect(g);g.connect(bgmGain);const a=Math.min(.03,len/4);
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+a);g.gain.setTargetAtTime(0,t+len*.8,len*.15+.02);o.start(t);o.stop(t+len+.4);}
+function hat(t){const n=actx.createBufferSource(),f=actx.createBiquadFilter(),g=actx.createGain();n.buffer=noiseBuf;f.type='highpass';f.frequency.value=7000;
+  n.connect(f);f.connect(g);g.connect(bgmGain);g.gain.setValueAtTime(.025,t);g.gain.exponentialRampToValueAtTime(.001,t+.05);n.start(t);n.stop(t+.06);}
+function kick(t){const o=actx.createOscillator(),g=actx.createGain();o.frequency.setValueAtTime(110,t);o.frequency.exponentialRampToValueAtTime(45,t+.12);
+  g.gain.setValueAtTime(.18,t);g.gain.exponentialRampToValueAtTime(.001,t+.2);o.connect(g);g.connect(bgmGain);o.start(t);o.stop(t+.22);}
+// 1小節分を予約する。2周目ごとにメロディを1オクターブ下の柔らかい音にして、聞き飽きにくくする
+function bgmSchedule(t){const b=BGM.bars[bgmBar%8],beat=60/BGM.bpm,soft=Math.floor(bgmBar/8)%2===1;
+  b[1].forEach(m=>tone(t,m,beat*4,'triangle',.022,1200));
+  tone(t,b[0],beat*1.5,'triangle',.11);tone(t+beat*2,b[0],beat*.5,'triangle',.08);tone(t+beat*3,b[0]+7,beat,'triangle',.08);
+  b[2].forEach(([at,m,len])=>soft?tone(t+at*beat,m-12,len*beat,'sine',.07):tone(t+at*beat,m,len*beat,'square',.035,1800));
+  kick(t);kick(t+beat*2);for(let i=0;i<4;i++)hat(t+(i+.5)*beat);
+  bgmBar++;}
+function bgmTick(){while(bgmNext<actx.currentTime+.3){bgmSchedule(bgmNext);bgmNext+=60/BGM.bpm*4;}}
+function bgmStart(){if(!bgmOn()||document.hidden)return;
+  if(!actx){const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;actx=new AC();bgmGain=actx.createGain();bgmGain.gain.value=.6;bgmGain.connect(actx.destination);
+    noiseBuf=actx.createBuffer(1,actx.sampleRate*.1,actx.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;}
+  actx.resume();if(!bgmTimer){bgmNext=actx.currentTime+.1;bgmTimer=setInterval(bgmTick,50);bgmTick();}}
+function bgmStop(){if(bgmTimer){clearInterval(bgmTimer);bgmTimer=null;}if(actx)actx.suspend();}
+const bgmBtn=document.getElementById('bgmBtn');
+function updBgm(){const on=bgmOn();bgmBtn.classList.toggle('off',!on);bgmBtn.setAttribute('aria-label',on?'BGMを止める':'BGMを流す');
+  bgmBtn.innerHTML=`<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M9 17.5V5l10-2v12.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="6.5" cy="17.5" r="2.5" fill="currentColor"/><circle cx="16.5" cy="15.5" r="2.5" fill="currentColor"/>${on?'':'<path d="M3 3l18 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>'}</svg>`;}
+bgmBtn.onclick=()=>{S.bgm=bgmOn()?0:1;save();updBgm();if(bgmOn())bgmStart();else bgmStop();toast(bgmOn()?'BGMを流します':'BGMを止めました');};
+window.addEventListener('pointerdown',bgmStart,{capture:true});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)bgmStop();else if(actx)bgmStart();});
+updBgm();
 function offline(since){
   const el=Math.min((Date.now()-since)/1000,OFFCAP[S.mgr||0]*3600);if(el<60||(S.rate<=0&&bgIncome()<=0))return;
   const amt=Math.round(S.rate*el*offEff()+bgIncome()*el);if(amt<1)return;
@@ -1633,7 +1753,7 @@ function renderMapPanel(){const P=document.getElementById('mapPanel'),i=mapSel,g
   let body='';
   if(st==='open'){const fi=freeIdxOf(i),si=setIdxOf(i),nm=k=>esc((k===S.active?S.shopName:S.shops[k].shopName)||g.area);
     const go=(k,t)=>k===S.active?`<button class="mbtn sec" data-go="${k}">${t}に戻る</button>`:`<button class="mbtn pri" data-go="${k}">${t}へ移動する</button>`;
-    body=`<h3>${g.no}号店 ${nm(fi)}</h3><div class="mp-sub">${fi===S.active?'いま表示している店です':'営業中。見ていない間は最高の売上ペースの1割が入ります'}</div>${info}`+go(fi,'この店');
+    body=`<h3>${g.no}号店 ${nm(fi)}</h3><div class="mp-sub">${fi===S.active?'いま表示している店です':'営業中。見ていない間もスタッフだけで営業を続けます'}</div>${info}`+go(fi,'この店');
     if(si>=0||canSetShop(i)){if(si>=0)body+=`<h3 class="mp-set">セット専門店 ${nm(si)}</h3><div class="mp-sub">${si===S.active?'いま表示している店です':'4人組の時間貸し専門。営業中'}</div>`+go(si,'セット専門店');
       else{const c=setOpenCost(i),short=S.money<c;body+=`<h3 class="mp-set">セット専門店</h3><div class="mp-sub">4人組の時間貸しだけを受ける店を、この街にもう1店出せます。ドリンクバー形式で、スタッフはホールスタッフ1人です。出店費用 ¥${fmt(c)}</div>`+
         `<button class="mbtn sec" id="mpSet" ${short?'disabled':''}>${short?`あと ¥${fmt(c-S.money)} 貯めると出せます`:'セット専門店を出す'}</button>`;}}}
@@ -1737,7 +1857,7 @@ const storyOpen=()=>!!storyCur;
 function fillText(t){return t.replace(/\{boss\}/g,bossLabel()).replace(/\{shop\}/g,shopName());}
 // チュートリアル中はヒントの会話を出さない(既読にしないので、終わったあと同じ状況になれば出る)
 const TUT_HOLD=['drink_hint','first_yakuman','first_break','first_rest'];
-function playScene(id,onDone,force){S.story=S.story||{};if(!STORY[id]||(S.story[id]&&!force)||(S.tut>0&&TUT_HOLD.includes(id))){onDone&&onDone();return;}
+function playScene(id,onDone,force){if(BG)return;S.story=S.story||{};if(!STORY[id]||(S.story[id]&&!force)||(S.tut>0&&TUT_HOLD.includes(id))){onDone&&onDone();return;}
   S.story[id]=1;save();storyQ.push({id,i:0,onDone});if(!storyCur)nextScene();}
 function nextScene(){storyCur=storyQ.shift()||null;setPre();document.body.classList.toggle('story',!!storyCur);const box=document.getElementById('story');if(!storyCur){box.classList.remove('show');return;}box.classList.add('show');showLine();}
 function showLine(){const [k,t]=STORY[storyCur.id][storyCur.i],face=document.getElementById('stFace');
@@ -1817,7 +1937,9 @@ function tutUpdate(){
 
 // ---------- loop ----------
 let last=performance.now(),acc=0;
-function loop(t){const dt=Math.max(0,Math.min((t-last)/1000,.1));last=t;if(S.started&&S.opened&&!storyOpen()){let g=dt*gameSpeed();while(g>1e-6){const s=Math.min(g,.1);update(s);g-=s;}}else{gt+=dt;updateOutside(dt);}tables.forEach(tb=>{if(tb.tap>0)tb.tap-=dt*3;});
+function loop(t){const dt=Math.max(0,Math.min((t-last)/1000,.1));last=t;if(S.started&&S.opened&&!storyOpen()){let g=dt*gameSpeed();while(g>1e-6){const s=Math.min(g,.1);update(s);g-=s;}}else{gt+=dt;updateOutside(dt);}
+  if(S.started&&S.shops&&S.tut<=0&&!storyOpen())bgStep(dt*gameSpeed()); // ほかの店も営業を続ける
+  if(bgBreaks.length&&!modal.classList.contains('show')&&!storyOpen())showBgBreak();tables.forEach(tb=>{if(tb.tap>0)tb.tap-=dt*3;});
   if(S.started)draw();tutUpdate();document.getElementById('money').textContent='¥'+fmt(S.money);drawTimebar();
   acc+=dt;if(acc>.25){acc=0;refresh();}requestAnimationFrame(loop);}
 {const iv=document.getElementById('intro');for(let i=0;i<14;i++){const p=document.createElement('i');p.className='petal';
