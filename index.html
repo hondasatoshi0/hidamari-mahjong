@@ -502,7 +502,7 @@ const decoBonus=()=>Object.keys(DECO).reduce((a,k)=>a+S.deco[k]*DECO[k].b/DECO_S
 const repMult=()=>0.5+0.2*S.rep;
 const hourNow=()=>Math.min(23,Math.floor(S.clock/60));
 const BASE_INTERVAL=6.5; // 来店間隔の基準(秒)
-const interval=()=>BASE_INTERVAL/(Date.now()<(S.boostUntil||0)?2:1)/(1+decoBonus())/(proOn()?2:1)/HOURS[hourNow()][0]/repMult()/ST().traffic;
+const interval=()=>BASE_INTERVAL/(1+decoBonus())/(proOn()?2:1)/HOURS[hourNow()][0]/repMult()/ST().traffic;
 const setRate=tb=>Math.round(500*(1+0.1*S.fee)*(1+0.3*tierOf(tb))*ST().fee);
 function addRep(d){S.rep=Math.max(1,Math.min(5,S.rep+d));}
 function pickType(mix){let r=Math.random(),a=0;for(const k of['s','w','g']){a+=mix[k];if(r<a)return k;}return 'g';}
@@ -548,9 +548,9 @@ function showOpenOverlay(){const ov=document.getElementById('openOv');
   document.getElementById('ooName').textContent=shopName();document.getElementById('ooPlace').textContent=`${ST().no}号店 ${ST().area}(${ST().place})`;
   ov.classList.add('show');}
 function prepareOpening(){const go=()=>playScene(`ch${S.stage}_intro`,showOpenOverlay);if(!S.shopName)askShopName(go);else go();}
-function grandOpen(){document.getElementById('openOv').classList.remove('show');S.opened=1;S.boostUntil=Date.now()+90000;spawnT=0;save();
+function grandOpen(){document.getElementById('openOv').classList.remove('show');S.opened=1;spawnT=0;save();
   const yk=document.getElementById('yk');document.getElementById('ykBig').textContent='開店!';document.getElementById('ykName').textContent=shopName();
-  document.getElementById('ykBonus').textContent='開店記念 90秒間 客足2倍';yk.classList.remove('show');void yk.offsetWidth;yk.classList.add('show');setTimeout(()=>yk.classList.remove('show'),2600);
+  document.getElementById('ykBonus').textContent='';yk.classList.remove('show');void yk.offsetWidth;yk.classList.add('show');setTimeout(()=>yk.classList.remove('show'),2600);
   const fl=document.getElementById('flash');fl.style.transition='none';fl.style.opacity=.6;requestAnimationFrame(()=>{fl.style.transition='opacity .6s';fl.style.opacity=0;});
   const cols=['#ffd35a','#ff6b6b','#7fd1ff','#8dff9a','#ffffff','#ff9ad5'];
   for(let i=0;i<6;i++)burst(DOOR+(i-2.5)*50,HI-20,30,cols);burst(W/2,HI/2,60,cols);shake=.3;
@@ -807,8 +807,8 @@ document.getElementById('nextDay').onclick=nextDay;
 function update(dt){
   gt+=dt;playTime+=dt;updateOutside(dt);
   // チュートリアル中は時間を止める:時計・半荘は進まず(卓はタップした分だけ進む)、お金も操作しないと増えない
-  const tutOn=S.tut>0;if(tutOn)S.boostUntil=Date.now()+90000; // 開店記念の客足2倍はチュートリアル後から数える
-  if(S.stage===0&&!S.drink&&S.money>=pr(250))playScene('drink_hint',()=>{if(!S.drink){S.guide='drink';save();}});
+  const tutOn=S.tut>0;
+  if(S.stage===0&&!S.drink&&!(S.story||{}).drink_hint&&S.tut<=0&&S.money>=pr(250))playScene('drink_hint',()=>{if(!S.drink){S.guide='drink';save();}});
   if(S.stage===1&&S.storeEarn>=ST().goal.earn*.25)playScene('pro_meet');
   const bg=tutOn?0:bgIncome();if(bg>0){chainAcc+=bg*dt;if(chainAcc>=1){const v=Math.floor(chainAcc);chainAcc-=v;S.money+=v;S.total+=v;}}
   checkGoal();
@@ -1162,7 +1162,6 @@ function draw(){
     const yy=f.y-f.t*26;ctx.lineWidth=3;ctx.strokeStyle='rgba(0,0,0,.6)';ctx.strokeText(f.text,f.x,yy);ctx.fillStyle=f.c;ctx.fillText(f.text,f.x,yy);ctx.globalAlpha=1;});
   parts.forEach(p=>{ctx.globalAlpha=Math.max(0,p.life/p.max);ctx.fillStyle=p.c;ctx.fillRect(p.x-p.s/2,p.y-p.s/2,p.s,p.s);});ctx.globalAlpha=1;
   if(proOn()){ctx.fillStyle='rgba(255,211,90,.95)';rr(W/2-62,134,124,18,9);ctx.fill();label('プロ来店中 客足2倍',W/2,143.5,11,'#1b1206');}
-  if(Date.now()<(S.boostUntil||0)){const yb=proOn()?156:134;ctx.fillStyle='rgba(255,120,150,.95)';rr(W/2-62,yb,124,18,9);ctx.fill();label('開店記念 客足2倍',W/2,yb+9.5,11,'#2a0710');}
   ctx=main;ctx.setTransform(1,0,0,1,0,0);ctx.imageSmoothingEnabled=false;ctx.clearRect(0,0,cv.width,cv.height);ctx.drawImage(buf,0,0,cv.width,cv.height);
   ctx.setTransform(dpr*scale,0,0,dpr*scale,0,0);replayText();
 }
@@ -1605,7 +1604,7 @@ const TUT=[
 ];
 // 会話のあとの操作案内(チュートリアルと同じ枠で、その操作だけ示す)。S.guideに案内中のキーを持つ
 const GUIDES={
-  drink:{t:'「設備」タブの「ドリンク」を導入すると、お客さんからドリンクの注文が入るようになります。',el:()=>tabEl('fac',ROW.drink),tipTop:1,done:()=>S.drink>0}
+  drink:{t:'ドリンクは「設備」タブから導入できます。導入すると、お客さんからドリンクの注文が入るようになります。',el:()=>tabEl('fac',ROW.drink),tipTop:1,free:1,next:'閉じる',done:()=>S.drink>0}
 };
 function tutNext(){S.tut++;tutBase=null;tutTap=0;coachTip._s=null;if(S.tut>TUT.length){S.tut=-1;toast('チュートリアル完了! いい店にしていきましょう');}save();}
 function tutUpdate(){
@@ -1621,12 +1620,13 @@ function tutUpdate(){
     if(!tutBase)tutBase={fee:S.fee,plant:S.deco.plant};
     if(st.done&&st.done()){tutNext();return;}}
   if(coachTip._s!==key){coachTip._s=key;
-    coachTip.innerHTML=`<div class="ct-h">${head}</div><div>${st.t}</div><div class="ct-b">${st.next?'<button type="button" class="ct-next">次へ</button>':''}</div>`;
-    const nx=coachTip.querySelector('.ct-next');if(nx)nx.onclick=tutNext;}
+    coachTip.innerHTML=`<div class="ct-h">${head}</div><div>${st.t}</div><div class="ct-b">${st.next?`<button type="button" class="ct-next">${st.next===1?'次へ':st.next}</button>`:''}</div>`;
+    const nx=coachTip.querySelector('.ct-next');if(nx)nx.onclick=g?()=>{S.guide=null;coachTip._s=null;save();}:tutNext;}
   let r=null;if(st.rect)r=st.rect();else if(st.el){const e=st.el();if(e&&e.offsetParent)r=e.getBoundingClientRect();}
   coachTip.style.display='block';const vh=window.innerHeight;
   // tipTopのステップは吹き出しを画面上部に固定する(枠がタブから購入ボタンへ移っても動かさない)
-  setBlock(st.next||st.watch||!r?null:r); // 見るだけのステップは画面全体を覆う
+  if(st.free)coachBlk.forEach(b=>b.style.display='none'); // 案内だけのときは操作をふさがない
+  else setBlock(st.next||st.watch||!r?null:r); // 見るだけのステップは画面全体を覆う
   if(r){const p=4;Object.assign(coachRing.style,{display:'block',left:r.left-p+'px',top:r.top-p+'px',width:r.width+p*2+'px',height:r.height+p*2+'px'});
     if(st.tipTop){coachTip.style.bottom='';coachTip.style.top='calc(60px + env(safe-area-inset-top,0px))';}
     else if(r.top+r.height/2>vh*.5){coachTip.style.top='';coachTip.style.bottom=Math.min(vh-120,vh-r.top+14)+'px';}
