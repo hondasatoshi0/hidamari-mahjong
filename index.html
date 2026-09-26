@@ -768,7 +768,7 @@ function endGame(tb){
   tb.dirt=Math.min(1,tb.dirt+(S.modes[tb.slot]==='set'?.04:.08));
   if(Math.random()<TIERS[tierOf(tb)].yk)yakuman(tb);
   const list=tb.seats.map(byId).filter(Boolean);
-  const brk=!tb.manual&&S.tiers[tb.slot]>=1&&Math.random()<(S.tiers[tb.slot]===1?.015:.008)*(S.maint?.5:1);
+  const brk=!tb.manual&&S.tiers[tb.slot]>=1&&Math.random()<brkRate(S.tiers[tb.slot]);
   if(S.modes[tb.slot]==='set'){
     const done=S.clock>=tb.setUntil||S.closing||brk;
     if(done){const hrs=Math.max(1,(S.clock-tb.setStart)/60);earn(Math.round(setRate(tb)*hrs),s.x,s.y-8,'#ffe08a');list.forEach(e=>leaveOrWait(e));
@@ -811,6 +811,8 @@ document.getElementById('bonus').onclick=()=>{const amt=bonusAmt;bonusT=0;docume
   playAd(()=>{earn(amt,AISLE,HI/2,'#ffd35a');toast('役満ボーナス +¥'+fmt(amt));});};
 
 // ---------- 故障と修理 ----------
+const brkRate=t=>(t===1?.015:t===2?.008:0)*(S.maint?.5:1); // 全自動卓が半荘1回ごとに故障する確率
+const brkTxt=t=>brkRate(t)?+(brkRate(t)*100).toFixed(2)+'%':'なし';
 const repairCost=i=>pr((S.tiers[i]===1?600:2500)*Math.pow(1.15,i));
 function breakTable(tb){playScene('first_break');tb.broken=true;tb.manual=false;shake=.2;burst(SLOTS[tb.slot].x,SLOTS[tb.slot].y,14,['#888','#bbb','#555']);
   toast(`${tb.slot+1}番卓が故障しました。卓をタップして対応を選べます`);}
@@ -1338,7 +1340,7 @@ const ROW={
 };
 function tableRow(i){return{name:`${i+1}番卓`,lv:()=>TIERS[S.tiers[i]].short,
   alt:{text:()=>'修理',cls:()=>tables[i].broken||tables[i].manual?'alt':'alt hide',click(){if(tables[i].broken||tables[i].manual)repairMenu(tables[i]);}},cost:()=>upCost(i,S.tiers[i]),max:()=>S.tiers[i]>=2,lock:no,
-  desc:()=>{const t=S.tiers[i];if(tables[i].broken)return t<2?'故障中。入れ替えるか、修理ボタンから対応を選べます':'故障中。修理ボタンから対応を選べます';if(tables[i].manual)return'全自動が止まり、手積みで営業中';if(t>=2)return`${TIERS[2].name}。半荘${TIERS[2].dur}秒、場代×${TIERS[2].mult}`;const n=TIERS[t+1];return`${n.name}へ。半荘${TIERS[t].dur}→${n.dur}秒、場代×${n.mult}`;},
+  desc:()=>{const t=S.tiers[i];if(tables[i].broken)return t<2?'故障中。入れ替えるか、修理ボタンから対応を選べます':'故障中。修理ボタンから対応を選べます';if(tables[i].manual)return'全自動が止まり、手積みで営業中';if(t>=2)return`${TIERS[2].name}。半荘${TIERS[2].dur}秒、場代×${TIERS[2].mult}、故障率${brkTxt(2)}/半荘`;const n=TIERS[t+1];return`${n.name}へ。半荘${TIERS[t].dur}→${n.dur}秒、場代×${n.mult}、故障率${brkTxt(t)}→${brkTxt(t+1)}/半荘`;},
   buy(){S.tiers[i]++;tables[i].broken=false;tables[i].manual=false;tables[i].repairing=false;const s=SLOTS[i];burst(s.x,s.y,24,['#ffd35a','#fff']);toast(`${i+1}番卓を${TIERS[S.tiers[i]].name}に入れ替えました`);}};}
 function decoRow(k){const d=DECO[k],L=()=>S.deco[k],pc=n=>+(d.b*100*n/DECO_STEP).toFixed(1);return{key:'deco:'+k,name:d.name,lv:()=>L()?`${d.grades[dg(k)-1]} (${L()}/${d.max})`:'',
   cost:()=>Math.round(d.c1*Math.pow(d.gs,L())),max:()=>L()>=d.max,lock:no,
