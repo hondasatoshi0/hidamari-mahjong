@@ -1258,7 +1258,6 @@ function renderTab(){
       d.innerHTML=`<div><div class="nm">${esc(bossLabel())}<small>あなた</small><small class="sst"></small></div><div class="ds">手が空いていればスタッフと同じ仕事を自動でこなします。注文、器の残ったサイドテーブル、汚れた卓、3人待っている卓をタップすると、その仕事を優先します。スタミナはありません</div><div class="stw">${statHTML(S.boss,1)}</div></div><div class="btns"><button class="alt tr" type="button">研修</button><button class="alt nmb" type="button">名前</button></div>`;
       d.querySelector('.tr').onclick=()=>training(S.boss);d.querySelector('.nmb').onclick=()=>askBossName();rows.push({crew:{m:S.boss,role:'boss'},sst:d.querySelector('.sst'),stw:d.querySelector('.stw'),dm:{set textContent(v){}},armed:false,boss:1});}
     addSec(L,'留守中の営業');addRow(L,ROW.mgr);
-    addSec(L,'スタッフ');
     const crewRow=c=>{const d=document.createElement('div');d.className='row';L.appendChild(d);
       d.innerHTML=`<div><div class="nm">${c.m.name}<small>${c.role==='hall'?'ホールスタッフ':'メンバー'}</small><small class="sst"></small></div><div class="stw">${statHTML(c.m,1)}</div></div><div class="btns"><button class="alt tr" type="button">研修</button><button class="alt dm" type="button">辞めてもらう</button></div>`;
       d.querySelector('.tr').onclick=()=>training(c.m);
@@ -1268,8 +1267,8 @@ function renderTab(){
         if(!row.armed){row.armed=true;refresh();setTimeout(()=>{row.armed=false;refresh();},3000);return;}
         row.armed=false;dismiss(c);};
       rows.push(row);};
-    addRow(L,ROW.member);S.members.forEach((m,i)=>crewRow({m,role:'member',i}));
-    addRow(L,ROW.hall);if(S.hallStaff&&S.hall)crewRow({m:S.hallStaff,role:'hall'});
+    addSec(L,'メンバー');addRow(L,ROW.member);S.members.forEach((m,i)=>crewRow({m,role:'member',i}));
+    addSec(L,'ホールスタッフ');addRow(L,ROW.hall);if(S.hallStaff&&S.hall)crewRow({m:S.hallStaff,role:'hall'});
     refresh();return;}
   if(tab==='reg'){REG.forEach((r,i)=>{const d=document.createElement('div');d.className='row';L.appendChild(d);
       rows.push({reg:i,el:d});});refresh();return;}
