@@ -188,6 +188,8 @@ nav button{font-size:12.5px}
 .buy:focus-visible,#rushBtn:focus-visible,nav button:focus-visible,.mbtn:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 .stat{display:flex;justify-content:space-between;padding:9px 2px;border-bottom:1px solid var(--line);font-size:14px}
 .stat b{font-family:"Dela Gothic One",sans-serif;font-weight:400}
+.sec{font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.06em;padding:16px 2px 6px;border-bottom:1.5px solid var(--line)}
+.sec:first-child{padding-top:6px}
 .note{font-size:12.5px;color:var(--sub);padding:10px 2px;line-height:1.6}
 /* 役満 */
 #yk{position:absolute;inset:0;display:none;align-items:center;justify-content:center;pointer-events:none;z-index:5}
@@ -1231,10 +1233,11 @@ function decoRow(k){const d=DECO[k],L=()=>S.deco[k],pc=n=>+(d.b*100*n/DECO_STEP)
   desc:()=>{const n=L();if(n>=d.max)return`最高グレード。来店ペース +${pc(n)}%`;const up=n%DECO_STEP===0;
     return`${up?(n?'次は':'')+d.grades[n/DECO_STEP]+'。':''}来店ペース +${pc(n+1)}%${n?`(いま +${pc(n)}%)`:''}`;},
   buy(){S.deco[k]++;const n=L();if(n%DECO_STEP===1)toast(`${d.name}を「${d.grades[dg(k)-1]}」にしました`);else toast(`${d.name}を強化しました(${n}/${d.max})`);}};}
+// 各タブの並び。{h:'…'}は見出し
 function tabRows(){
-  if(tab==='table'){const r=[ROW.addTable,ROW.fee];tables.forEach((_,i)=>r.push(tableRow(i)));return r;}
-  if(tab==='fac')return[ROW.mgr,ROW.mag,ROW.manga,ROW.tv,ROW.drink,ROW.food,ROW.broom,ROW.maint];
-  if(tab==='deco')return Object.keys(DECO).map(decoRow);
+  if(tab==='table'){const r=[{h:'卓と場代'},ROW.addTable,ROW.fee,{h:'卓の入れ替え'}];tables.forEach((_,i)=>r.push(tableRow(i)));return r;}
+  if(tab==='fac')return[{h:'待合スペース'},ROW.mag,ROW.manga,ROW.tv,{h:'ドリンク・フード'},ROW.drink,ROW.food,{h:'掃除・メンテナンス'},ROW.broom,ROW.maint];
+  if(tab==='deco')return[{h:'店内の飾り'},decoRow('plant'),decoRow('clock'),decoRow('art'),{h:'店内の環境'},decoRow('speaker'),decoRow('light'),decoRow('purifier'),{h:'外まわり'},decoRow('neon')];
   if(tab==='staff')return[ROW.member,ROW.hall];
   if(tab==='reg')return REG.map((r,i)=>({reg:i}));
   return[];
@@ -1242,21 +1245,23 @@ function tabRows(){
 let tab='table',rows=[];
 function renderTab(){
   const L=document.getElementById('list');L.innerHTML='';rows=[];
-  if(tab==='shop'){L.innerHTML=`<div class="stat"><span>ほかの店からの収入</span><b>¥${fmt(bgIncome()*60)}/分</b></div><div class="stat"><span>累計売上</span><b id="st-total"></b></div>
+  if(tab==='shop'){L.innerHTML=`<div class="sec">営業成績</div><div class="stat"><span>ほかの店からの収入</span><b>¥${fmt(bgIncome()*60)}/分</b></div><div class="stat"><span>累計売上</span><b id="st-total"></b></div>
     <div class="stat"><span>営業日数</span><b id="st-day"></b></div><div class="stat"><span>半荘数</span><b id="st-games"></b></div><div class="stat"><span>役満</span><b id="st-yaku"></b></div>
     <div class="stat"><span>提供したドリンク・フード</span><b id="st-served"></b></div>
     <div class="stat"><span>掃除した回数</span><b id="st-clean"></b></div><div class="stat"><span>修理した回数</span><b id="st-rep"></b></div><div class="stat"><span>満席で帰ったお客さん</span><b id="st-lost"></b></div>
     <div class="stat"><span>来店ペース(内装)</span><b id="st-pace"></b></div>
     <div class="note">汚れた卓はお客さんに避けられ、評判も下がります。全自動卓は時々故障するので、店内の卓をタップして対応してください。お店を離れている間も売上が貯まります(店長代行で最大12時間分まで延ばせます)。プレイ中の卓をタップすると、半荘が少し早く進みます。</div>
-    <div class="row"><div><div class="nm">データをリセット</div><div class="ds">最初からやり直します</div></div><button class="buy" id="resetBtn">リセット</button></div>`;
+    <div class="sec">データ</div><div class="row"><div><div class="nm">データをリセット</div><div class="ds">最初からやり直します</div></div><button class="buy" id="resetBtn">リセット</button></div>`;
     let armed=false;document.getElementById('resetBtn').onclick=e=>{if(!armed){armed=true;e.target.textContent='もう一度押す';setTimeout(()=>{armed=false;e.target.textContent='リセット';},3000);return;}
       try{localStorage.removeItem(KEY);}catch(_){}S=fresh();REG=REGS[0];applyLayout();initWorld();renderTab();setPre();playScene('prologue',()=>openMap('start'));toast('リセットしました');};
     refresh();return;}
-  if(tab==='staff'){{const d=document.createElement('div');d.className='row';L.appendChild(d);
+  if(tab==='staff'){addSec(L,'店長');{const d=document.createElement('div');d.className='row';L.appendChild(d);
       d.innerHTML=`<div><div class="nm">${esc(bossLabel())}<small>あなた</small><small class="sst"></small></div><div class="ds">手が空いていればスタッフと同じ仕事を自動でこなします。注文、器の残ったサイドテーブル、汚れた卓、3人待っている卓をタップすると、その仕事を優先します。スタミナはありません</div><div class="stw">${statHTML(S.boss,1)}</div></div><div class="btns"><button class="alt tr" type="button">研修</button><button class="alt nmb" type="button">名前</button></div>`;
       d.querySelector('.tr').onclick=()=>training(S.boss);d.querySelector('.nmb').onclick=()=>askBossName();rows.push({crew:{m:S.boss,role:'boss'},sst:d.querySelector('.sst'),stw:d.querySelector('.stw'),dm:{set textContent(v){}},armed:false,boss:1});}
-    [ROW.member,ROW.hall].forEach(u=>addRow(L,u));
+    addSec(L,'採用');[ROW.member,ROW.hall].forEach(u=>addRow(L,u));
+    addSec(L,'留守中の営業');addRow(L,ROW.mgr);
     const crew=S.members.map((m,i)=>({m,role:'member',i})).concat(S.hallStaff&&S.hall?[{m:S.hallStaff,role:'hall'}]:[]);
+    if(crew.length)addSec(L,'スタッフ一覧');
     crew.forEach(c=>{const d=document.createElement('div');d.className='row';L.appendChild(d);
       d.innerHTML=`<div><div class="nm">${c.m.name}<small>${c.role==='hall'?'ホールスタッフ':'メンバー'}</small><small class="sst"></small></div><div class="stw">${statHTML(c.m,1)}</div></div><div class="btns"><button class="alt tr" type="button">研修</button><button class="alt dm" type="button">辞めてもらう</button></div>`;
       d.querySelector('.tr').onclick=()=>training(c.m);
@@ -1267,12 +1272,13 @@ function renderTab(){
         row.armed=false;dismiss(c);};
       rows.push(row);});
     refresh();return;}
-  if(tab==='reg'){REG.forEach((r,i)=>{const d=document.createElement('div');d.className='row';L.appendChild(d);
+  if(tab==='reg'){addSec(L,'この店の常連');REG.forEach((r,i)=>{const d=document.createElement('div');d.className='row';L.appendChild(d);
       rows.push({reg:i,el:d});});refresh();return;}
   tabRows().forEach(u=>addRow(L,u));
   refresh();
 }
-function addRow(L,u){{const d=document.createElement('div');d.className='row'+(u.alt?' two':'');
+function addSec(L,t){const d=document.createElement('div');d.className='sec';d.textContent=t;L.appendChild(d);}
+function addRow(L,u){if(u.h){addSec(L,u.h);return;}{const d=document.createElement('div');d.className='row'+(u.alt?' two':'');
     d.innerHTML=`<div><div class="nm">${u.name}<small></small></div><div class="ds"></div></div><button class="buy" type="button"></button>`;
     if(u.alt){const ab=document.createElement('button');ab.type='button';ab.onclick=()=>{u.alt.click();refresh();};d.insertBefore(ab,d.querySelector('.buy'));u._alt=ab;}
     const btn=d.querySelector('.buy');btn.onclick=()=>{if(u.max()||u.lock())return;if(u.pickFirst){interview(u.pickFirst);return;}if(u.iap){playPurchase(u.name,u.iap(),()=>{u.buy();save();refresh();});return;}const c=pr(u.cost());if(S.money<c)return;S.money-=c;u.buy();save();if(u.rerender)renderTab();else refresh();};
