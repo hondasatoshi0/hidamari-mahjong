@@ -635,10 +635,11 @@ function grandOpen(){document.getElementById('openOv').classList.remove('show');
 // 1号店の開店直後、最初のお客さんとして田中さんが来る
 function spawnTanaka(){const e=mkCust('s',0);e.bubble='どうも';e.bubbleT=3;const tb=openTable(e);if(tb){ents.push(e);sendToSeat(e,tb,freeIdx(tb));}}
 const isCrew=e=>e&&(e.type==='staff'||e.type==='boss');
+function proStand(e){freeSeat(e);e.orders=[];e.state='toStand';const y=Math.min(364,CY-24);route(e,AISLES[0],y,y);}
 function mkPro(){const e={id:nid++,type:'pro',outside:1,x:-16,y:SW,corr:CY,path:[],moving:false,state:'toStand',dir:-Math.PI/2,body:'#1f2a4a',hair:'#111'};ents.push(e);route(e,AISLES[0],Math.min(364,CY-24),Math.min(364,CY-24));}
 function initWorld(){ents=[];tables=[];orders=[];waitSeats=[null,null,null,null];
   for(let i=0;i<S.tiers.length;i++){addTable();const st=(S.tb||[])[i];if(st){tables[i].dirt=st.d||0;tables[i].broken=!!st.b;tables[i].manual=!!st.m;}}
-  for(let i=0;i<S.members.length;i++)mkStaff(i);if(S.hall)mkHall();mkBoss();if(proOn()&&!isSet())mkPro();}
+  for(let i=0;i<S.members.length;i++)mkStaff(i);if(S.hall)mkHall();mkBoss();if(proOn())mkPro();}
 const byId=id=>ents.find(e=>e.id===id);
 const occ=tb=>tb.seats.filter(Boolean).length;
 
@@ -782,6 +783,7 @@ function endGame(tb){
   if(brk){list.forEach(e=>{e.orders=[];if(isCrew(e)){goHome(e);return;}if(S.closing){leave(e);return;}
       freeSeat(e);const t2=openTable(e);if(t2&&t2!==tb){sendToSeat(e,t2,freeIdx(t2));return;}
       if(e.type==='cust'&&S.wait){const w=waitSeats.indexOf(null);if(w>=0){sendToWait(e,w);return;}}
+      if(e.type==='pro'&&proOn()){proStand(e);return;}
       leave(e,e.type==='pro'?'またね':'💦');});
     tb.waitSince=gt;breakTable(tb);return;}
   list.forEach(e=>{
@@ -931,7 +933,7 @@ function update(dt){
   if(pro){
     if(!proOn()&&pro.state!=='leaving'&&!(pro.table&&pro.table.state==='play'))leave(pro,'またね');
     else if(pro.state==='standby'){const tb=openTable(null);if(tb)sendToSeat(pro,tb,freeIdx(tb));}
-  }
+  }else if(proOn()&&!S.closing)mkPro();
   tables.forEach(tb=>{
     const T=TIERS[tierOf(tb)];
     if(tb.broken){if(Math.random()<dt*3)parts.push({x:SLOTS[tb.slot].x+rnd(-10,10),y:SLOTS[tb.slot].y,vx:rnd(-6,6),vy:-18,life:1.2,max:1.4,c:'rgba(160,160,160,.6)',s:4});return;}
@@ -1496,7 +1498,7 @@ listEl.addEventListener('touchend',()=>{if(drag&&drag.fromList)dEnd();});
 listEl.addEventListener('touchcancel',()=>{if(drag&&drag.fromList)dEnd();});
 sheetEl.addEventListener('click',e=>{if(Date.now()<dragUntil){e.stopPropagation();e.preventDefault();}},true); // ドラッグ直後のタップ扱いを無効化
 document.addEventListener('gesturestart',e=>e.preventDefault()); // iOSのピンチズーム抑止
-document.getElementById('rushBtn').onclick=()=>{if(proOn())return;playAd(()=>{S.proUntil=Date.now()+120000;if(!ents.some(e=>e.type==='pro')&&!isSet())mkPro();spawnT=0;toast('麻雀プロが来店!2分間、客足が2倍になります');save();});};
+document.getElementById('rushBtn').onclick=()=>{if(proOn())return;playAd(()=>{S.proUntil=Date.now()+120000;if(!ents.some(e=>e.type==='pro'))mkPro();spawnT=0;toast('麻雀プロが来店!2分間、客足が2倍になります');save();});};
 
 // ---------- 効果音:タップしたときのクリック音。音声ファイルは使わず Web Audio で合成する ----------
 // オン/オフは端末ごとに保存し、データをリセットしても消さない
