@@ -91,6 +91,8 @@ nav button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--acce
 .map-panel .mp-grid{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13.5px;margin-bottom:12px}
 .map-panel .mp-grid span{color:var(--sub)}
 .map-panel .mbtn{margin-top:6px}
+.map-panel{max-height:60vh;overflow-y:auto;overscroll-behavior:contain}
+.map-panel h3.mp-set{margin-top:16px;padding-top:12px;border-top:1px solid var(--line)}
 @keyframes pinPulse{0%{r:9;opacity:.9}100%{r:22;opacity:0}}
 #mapSvg .pulse{animation:pinPulse 1.4s ease-out infinite}
 @media (prefers-reduced-motion: reduce){#mapSvg .pulse{animation:none}}
@@ -172,7 +174,7 @@ body.story .hd-btns{visibility:hidden} /* 会話中は右上をスキップボ�
 @keyframes stBlink{50%{opacity:.2}}
 .row.two{grid-template-columns:1fr auto auto}
 .alt{border:1.5px solid var(--accent);border-radius:10px;min-height:44px;min-width:64px;padding:6px 10px;font:inherit;font-weight:700;font-size:13px;background:transparent;color:var(--accent);cursor:pointer}
-.alt.set{background:var(--gold);border-color:var(--gold);color:#1b1206}
+.alt.hide{display:none}
 .hearts{color:#e0506a;font-size:12px;letter-spacing:1px}
 .visits{font-size:12.5px;color:var(--sub);text-align:right;white-space:nowrap}
 #day{position:absolute;inset:0;display:none;align-items:center;justify-content:center;z-index:7;background:rgba(5,8,20,.72);color:#fff;text-align:center}
@@ -515,7 +517,7 @@ const DECO={
 const DECO_STEP=5;
 Object.values(DECO).forEach(d=>{d.max=d.grades.length*DECO_STEP;d.gs=Math.pow(d.g,1/DECO_STEP);d.c1=d.c*(d.gs-1)/(d.g-1);});
 const dg=k=>Math.ceil(S.deco[k]/DECO_STEP); // 見た目のグレード(0〜3)
-const DEF={story:null,boss:null,started:0,active:0,shops:null,stage:0,storeEarn:0,chain:0,stores:[],cleared:0,members:null,hallStaff:null,cands:{},broom:0,maint:0,repairs:0,cleans:0,money:200,tiers:[0,0],modes:['free','free'],clock:600,day:1,closing:0,rep:3,visits:0,regs:[0,0,0,0,0],dayEarn:0,dayVisits:0,fee:0,drink:0,food:0,hall:0,staff:1,wait:1,tv:0,manga:0,mag:0,
+const DEF={kind:'free',story:null,boss:null,started:0,active:0,shops:null,stage:0,storeEarn:0,chain:0,stores:[],cleared:0,members:null,hallStaff:null,cands:{},broom:0,maint:0,repairs:0,cleans:0,money:200,tiers:[0,0],modes:['free','free'],clock:600,day:1,closing:0,rep:3,visits:0,regs:[0,0,0,0,0],dayEarn:0,dayVisits:0,fee:0,drink:0,food:0,hall:0,staff:1,wait:1,tv:0,manga:0,mag:0,
   deco:{plant:0,clock:0,speaker:0,light:0,purifier:0,art:0,neon:0},
   total:0,games:0,yaku:0,lost:0,served:0,proUntil:0,rate:0,lv2:1,tut:0,last:Date.now()};
 const KEY='jansou-proto-v3';
@@ -540,9 +542,13 @@ function clampS(d){d.iap=Object.assign({noAds:0,speed:0,mul:1,off:0,starter:0},d
   d.members=d.members.slice(0,6);d.staff=d.members.length;
   if(d.hall&&!d.hallStaff)d.hallStaff=genStaffRaw(d);
   d.members.concat(d.hallStaff?[d.hallStaff]:[]).forEach(m=>{if(!m.cap)addCap(m);if(m.sta==null){m.sta=1+Math.floor(Math.random()*3);m.cap.sta=Math.min(5,m.sta+Math.floor(Math.random()*(6-m.sta)));}});
-  (d.shops||[]).forEach(sh=>(sh.members||[]).concat(sh.hallStaff?[sh.hallStaff]:[]).forEach(m=>{if(m.sta==null){m.sta=1+Math.floor(Math.random()*3);m.cap=m.cap||{};m.cap.sta=Math.min(5,m.sta+Math.floor(Math.random()*(6-m.sta)));}}));migrateShops(d);return d;}
-const SHOP_KEYS=['opened','shopName','mgr','stage','tiers','modes','tb','fee','drink','food','hall','hallStaff','members','staff','wait','tv','manga','mag','broom','maint','deco','rep','storeEarn','bestRate','rate','regs','visits','cands','cleared'];
-function freshShop(stage,d){return{opened:0,shopName:'',stage,tiers:[0,0],modes:['free','free'],tb:[],fee:0,drink:0,food:0,hall:0,hallStaff:null,members:[genStaffRaw(d)],staff:1,
+  (d.shops||[]).forEach(sh=>(sh.members||[]).concat(sh.hallStaff?[sh.hallStaff]:[]).forEach(m=>{if(m.sta==null){m.sta=1+Math.floor(Math.random()*3);m.cap=m.cap||{};m.cap.sta=Math.min(5,m.sta+Math.floor(Math.random()*(6-m.sta)));}}));
+  // 卓のフリー/セット切り替えは廃止。フリー店の卓はすべてフリー、セット専門店の卓はすべてセット
+  d.kind=d.kind||'free';(d.shops||[]).forEach(sh=>{sh.kind=sh.kind||'free';});
+  const fm=x=>{if(x.modes)x.modes=x.modes.map(()=>x.kind==='set'?'set':'free');};fm(d);(d.shops||[]).forEach(fm);
+  migrateShops(d);return d;}
+const SHOP_KEYS=['kind','opened','shopName','mgr','stage','tiers','modes','tb','fee','drink','food','hall','hallStaff','members','staff','wait','tv','manga','mag','broom','maint','deco','rep','storeEarn','bestRate','rate','regs','visits','cands','cleared'];
+function freshShop(stage,d,kind){kind=kind||'free';return{kind,opened:0,shopName:'',stage,tiers:[0,0],modes:[kind,kind],tb:[],fee:0,drink:0,food:0,hall:0,hallStaff:null,members:[genStaffRaw(d)],staff:1,
   mgr:0,wait:1,tv:0,manga:0,mag:0,broom:0,maint:0,deco:{plant:0,clock:0,speaker:0,light:0,purifier:0,art:0,neon:0},rep:3,storeEarn:0,bestRate:0,rate:0,regs:[0,0,0,0,0],visits:0,cands:{},cleared:0};}
 function snapShop(d){const o={};SHOP_KEYS.forEach(k=>o[k]=d[k]);return JSON.parse(JSON.stringify(o));}
 function migrateShops(d){if(d.shops)return;const cur=d.stage||0;d.shops=[];
@@ -566,7 +572,7 @@ const decoBonus=()=>Object.keys(DECO).reduce((a,k)=>a+S.deco[k]*DECO[k].b/DECO_S
 const repMult=()=>0.5+0.2*S.rep;
 const hourNow=()=>Math.min(23,Math.floor(S.clock/60));
 const BASE_INTERVAL=6.5; // 来店間隔の基準(秒)
-const interval=()=>BASE_INTERVAL/(1+decoBonus())/(proOn()?2:1)/HOURS[hourNow()][0]/repMult()/ST().traffic;
+const interval=()=>BASE_INTERVAL/(1+decoBonus())/(proOn()?2:1)/HOURS[hourNow()][0]/repMult()/ST().traffic*(isSet()?2:1); // セットは4人組なので来る間隔を長く
 const setRate=tb=>Math.round(500*(1+0.1*S.fee)*(1+0.3*tierOf(tb))*ST().fee);
 function addRep(d){S.rep=Math.max(1,Math.min(5,S.rep+d));}
 function pickType(mix){let r=Math.random(),a=0;for(const k of['s','w','g']){a+=mix[k];if(r<a)return k;}return 'g';}
@@ -598,10 +604,10 @@ function askBossName(onDone,first){
   document.getElementById('bnOk').onclick=ok;inp.onkeydown=ev=>{if(ev.key==='Enter'){ev.preventDefault();ok();}};
   const x=document.getElementById('bnX');if(x)x.onclick=()=>modal.classList.remove('show');}
 // 店の名前
-const defaultShopName=()=>S.stage===0?'雀荘 ひだまり':`ひだまり ${ST().area}店`;
+const defaultShopName=()=>isSet()?`ひだまり ${ST().area} セット店`:S.stage===0?'雀荘 ひだまり':`ひだまり ${ST().area}店`;
 const shopName=()=>(S.shopName||'').trim()||defaultShopName();
 function askShopName(onDone){const g=ST();
-  mcard.innerHTML=`<h2>${g.no}号店の名前を決めてください</h2><p>${g.area}の${g.place}に出す店です。看板と画面上部に表示されます。</p>
+  mcard.innerHTML=`<h2>${g.no}号店${isSet()?' セット専門店':''}の名前を決めてください</h2><p>${g.area}の${g.place}に出す${isSet()?'セット専門店':'店'}です。看板と画面上部に表示されます。</p>
     <input id="shopNameIn" type="text" maxlength="10" autocomplete="off" placeholder="${esc(defaultShopName())}" aria-label="店の名前" value="${esc(S.shopName||'')}">
     <p class="nm-hint">10文字まで。空欄なら「${esc(defaultShopName())}」になります</p><button class="mbtn pri" id="snOk" type="button">決定</button>`;
   modal.classList.add('show');const inp=document.getElementById('shopNameIn');setTimeout(()=>inp.focus(),50);
@@ -609,7 +615,7 @@ function askShopName(onDone){const g=ST();
   document.getElementById('snOk').onclick=ok;inp.onkeydown=ev=>{if(ev.key==='Enter'){ev.preventDefault();ok();}};}
 // 開店式:「開店する」ボタンを押すまで店は開かない
 function showOpenOverlay(){const ov=document.getElementById('openOv');
-  document.getElementById('ooName').textContent=shopName();document.getElementById('ooPlace').textContent=`${ST().no}号店 ${ST().area}(${ST().place})`;
+  document.getElementById('ooName').textContent=shopName();document.getElementById('ooPlace').textContent=`${ST().no}号店 ${ST().area}${isSet()?' セット専門店':''}(${ST().place})`;
   ov.classList.add('show');}
 function prepareOpening(){const go=()=>playScene(`ch${S.stage}_intro`,showOpenOverlay);if(!S.shopName)askShopName(go);else go();}
 function grandOpen(){document.getElementById('openOv').classList.remove('show');S.opened=1;spawnT=0;save();
@@ -626,7 +632,7 @@ const isCrew=e=>e&&(e.type==='staff'||e.type==='boss');
 function mkPro(){const e={id:nid++,type:'pro',outside:1,x:-16,y:SW,corr:CY,path:[],moving:false,state:'toStand',dir:-Math.PI/2,body:'#1f2a4a',hair:'#111'};ents.push(e);route(e,AISLES[0],Math.min(364,CY-24),Math.min(364,CY-24));}
 function initWorld(){ents=[];tables=[];orders=[];waitSeats=[null,null,null,null];
   for(let i=0;i<S.tiers.length;i++){addTable();const st=(S.tb||[])[i];if(st){tables[i].dirt=st.d||0;tables[i].broken=!!st.b;tables[i].manual=!!st.m;}}
-  for(let i=0;i<S.members.length;i++)mkStaff(i);if(S.hall)mkHall();mkBoss();if(proOn())mkPro();}
+  for(let i=0;i<S.members.length;i++)mkStaff(i);if(S.hall)mkHall();mkBoss();if(proOn()&&!isSet())mkPro();}
 const byId=id=>ents.find(e=>e.id===id);
 const occ=tb=>tb.seats.filter(Boolean).length;
 
@@ -679,7 +685,7 @@ const cookMul=e=>e.st?1.3-0.12*e.st.cook:1;
 const custPat=e=>CT[e.ctype].pat+(e.reg!=null?hearts(S.regs[e.reg])*10:0);
 function spawn(){
   const type=pickType(HOURS[hourNow()][1]);
-  if(Math.random()<CT[type].set&&S.modes.includes('set')){
+  if(isSet()){
     const tb=tables.find(t=>!t.broken&&S.modes[t.slot]==='set'&&t.state==='open'&&occ(t)===0&&t.side.every(x=>!x.length));
     if(tb){for(let i=0;i<4;i++){const e=mkCust(type,null);e.x=-16-i*16;e.y=SW;e.set=true;ents.push(e);sendToSeat(e,tb,i);}
       tb.setStart=S.clock;tb.setUntil=S.clock+rnd(120,240);S.visits+=4;S.dayVisits+=4;
@@ -816,19 +822,29 @@ function repairMenu(tb){
 
 // ---------- ステージと目標 ----------
 let goalShown=-1;
-const isNewest=()=>S.active===S.shops.length-1;
-function checkGoal(){if(goalMet()&&!S.cleared){S.cleared=1;save();
+// 1つの街にフリー店1つ+セット専門店1つ(2号店の街から)。街の進み方はフリー店だけで数える
+const isSet=()=>S.kind==='set';
+const freeIdxOf=i=>S.shops.findIndex(sh=>sh.stage===i&&sh.kind!=='set');
+const setIdxOf=i=>S.shops.findIndex(sh=>sh.stage===i&&sh.kind==='set');
+const nextStage=()=>S.shops.filter(sh=>sh.kind!=='set').length; // 次にフリー店を出す街
+const isNewest=()=>!isSet()&&S.stage===nextStage()-1;
+// いちばん新しいフリー店が目標を達成したか(見ている店がどこでも判定できる)
+const newestCleared=()=>{const k=freeIdxOf(nextStage()-1);if(k<0)return false;return k===S.active?(goalMet()||!!S.cleared):!!S.shops[k].cleared;};
+const setOpenCost=i=>Math.round(STAGES[i].open*0.5);
+function checkGoal(){if(isSet())return;if(goalMet()&&!S.cleared){S.cleared=1;save();
   const last=S.stage>=STAGES.length-1;playScene(last?'finale':`ch${S.stage}_end`,last?()=>openMap('view'):null);
   toast(S.stage+1<STAGES.length?`${ST().no}号店の目標を達成しました。次の店を出せます`:'東京の目標を達成。全国制覇です');burst(W/2,HI/2,60,['#ffd35a','#ffffff']);}}
 function drawGoal(){const g=ST().goal,el=document.getElementById('goal');
-  const pe=Math.min(1,S.storeEarn/g.earn),ok=goalMet()||S.cleared,canOpen=ok&&isNewest()&&S.shops.length<STAGES.length;
-  const key=[S.active,S.shops.length,ok,S.money>=((STAGES[S.shops.length]||{}).open||0),Math.floor(pe*100),S.rep.toFixed(1)].join();if(el._k===key)return;el._k=key;
+  if(isSet()){const key='set'+S.active+Math.floor(S.storeEarn);if(el._k===key)return;el._k=key;el.className='';
+    el.innerHTML=`<span>セット専門店  この店の売上 ¥${fmt(S.storeEarn)}</span>`;return;}
+  const ns=nextStage(),pe=Math.min(1,S.storeEarn/g.earn),ok=goalMet()||S.cleared,canOpen=ok&&isNewest()&&ns<STAGES.length;
+  const key=[S.active,ns,ok,S.money>=((STAGES[ns]||{}).open||0),Math.floor(pe*100),S.rep.toFixed(1)].join();if(el._k===key)return;el._k=key;
   el.className=ok?'done':'';
-  const nx=STAGES[S.shops.length];el.innerHTML=canOpen?`<span>目標達成。${nx.area}に${nx.no}号店を出せます(出店費用 ¥${fmt(nx.open)})</span><button type="button" id="openBtn">出店する</button>`
+  const nx=STAGES[ns];el.innerHTML=canOpen?`<span>目標達成。${nx.area}に${nx.no}号店を出せます(出店費用 ¥${fmt(nx.open)})</span><button type="button" id="openBtn">出店する</button>`
     :ok?`<span>${S.stage+1>=STAGES.length?'全国制覇! この店は目標達成済みです':'この店は目標達成済みです'}</span>`
     :`<span>目標 ¥${fmt(S.storeEarn)} / ¥${fmt(g.earn)}  ★${S.rep.toFixed(1)} / ${g.rep.toFixed(1)}</span><i><b style="width:${Math.round(pe*100)}%"></b></i>`;
   const b=document.getElementById('openBtn');if(b)b.onclick=()=>openMap('open');}
-function openStoreMenu(){const n=STAGES[S.shops.length];if(!n)return;const oc=n.open,short=S.money<oc;
+function openStoreMenu(){const n=STAGES[nextStage()];if(!n)return;const oc=n.open,short=S.money<oc;
   mcard.innerHTML=`<h2>${n.no}号店を出店</h2><p>${n.area}の${n.place}に新しい店を出します。場代は1号店の${n.fee}倍ですが、設備や人件費などの物価は${n.cost}倍の街です。卓は最大${n.max}卓です。</p>
     <p style="font-weight:700;color:var(--ink)">出店費用 ¥${fmt(oc)}(所持金 ¥${fmt(S.money)})</p>
     <p>新しい店に持っていくのは所持金だけです。スタッフと常連はいまの店に残り、いまの店はそのまま営業を続けます。見ていない店には、最高の売上ペースの1割が入ってきます。</p>
@@ -843,8 +859,11 @@ function switchShop(i,quiet){if(i===S.active||!S.shops[i])return;
   incomeLog=[];playTime=0;orders=[];applyLayout();initWorld();save();renderTab();document.getElementById('goal')._k=null;
   document.getElementById('openOv').classList.remove('show');
   if(!quiet){toast(`${shopName()}に移動しました`);if(!S.opened)prepareOpening();}}
-function newStore(){if(!isNewest()||S.shops.length>=STAGES.length)return;const oc=STAGES[S.shops.length].open;if(S.money<oc)return;S.money-=oc;
-  S.shops.push(freshShop(S.shops.length,S));switchShop(S.shops.length-1,true);prepareOpening();}
+function newStore(){const ns=nextStage();if(!newestCleared()||ns>=STAGES.length)return;const oc=STAGES[ns].open;if(S.money<oc)return;S.money-=oc;
+  S.shops.push(freshShop(ns,S));switchShop(S.shops.length-1,true);prepareOpening();}
+// セット専門店:2号店の街から、フリー店のある街にもう1店出せる
+function newSetStore(i){if(i<1||setIdxOf(i)>=0||freeIdxOf(i)<0)return;const oc=setOpenCost(i);if(S.money<oc)return;S.money-=oc;
+  S.shops.push(freshShop(i,S,'set'));switchShop(S.shops.length-1,true);prepareOpening();}
 
 // ---------- 閉店 ----------
 let closeT=0,dayCardT=0;
@@ -1260,9 +1279,9 @@ cv.addEventListener('pointerdown',ev=>{const r=cv.getBoundingClientRect(),x=(ev.
 const no=()=>null;
 const ROW={
   addTable:{name:'卓を増やす',lv:()=>tables.length+'卓',cost:()=>Math.round(500*Math.pow(2.6,tables.length-2)),max:()=>tables.length>=ST().max,lock:no,rerender:1,
-    desc:()=>tables.length>=ST().max?`この店は${ST().max}卓で満卓です`:`手積み卓を追加。いま ${tables.length}/${ST().max}卓`,buy(){S.tiers.push(0);S.modes.push('free');addTable();toast('卓を増やしました');}},
+    desc:()=>tables.length>=ST().max?`この店は${ST().max}卓で満卓です`:`手積み卓を追加。いま ${tables.length}/${ST().max}卓`,buy(){S.tiers.push(0);S.modes.push(isSet()?'set':'free');addTable();toast('卓を増やしました');}},
   fee:{name:'場代',lv:()=>'Lv'+S.fee,cost:()=>Math.round(32*Math.pow(1.265,S.fee)),max:()=>false,lock:no,
-    desc:()=>`フリー1人 ¥${fmt(40*(1+0.1*S.fee)*ST().fee)}/半荘、セット ¥${fmt(500*(1+0.1*S.fee)*ST().fee)}/時間から`,buy(){S.fee++;}},
+    desc:()=>isSet()?`セット1卓 ¥${fmt(500*(1+0.1*S.fee)*ST().fee)}/時間から`:`フリー1人 ¥${fmt(40*(1+0.1*S.fee)*ST().fee)}/半荘から`,buy(){S.fee++;}},
   wait:{name:'待合室',lv:()=>S.wait?'開放済み':'',cost:()=>800,max:()=>!!S.wait,lock:no,
     desc:()=>'満席のときにお客さんが4人まで待てます',buy(){S.wait=1;toast('待合室を開放しました');}},
   mag:{name:'雑誌',lv:()=>S.mag?'設置済み':'',cost:()=>300,max:()=>!!S.mag,lock:no,
@@ -1282,14 +1301,12 @@ const ROW={
   maint:{name:'保守契約',lv:()=>S.maint?'契約中':'',cost:()=>3000,max:()=>!!S.maint,lock:no,
     desc:()=>'全自動卓の故障が半分に減ります',buy(){S.maint=1;toast('保守契約を結びました');}},
   member:{name:'メンバーを採用',lv:()=>S.members.length+'/'+memberCap()+'人',cost:()=>0,max:()=>S.members.length>=memberCap(),lock:no,pickFirst:'member',
-    desc:()=>`1卓に1人まで入って打ち、手が空いたら提供や片づけ、掃除をします(この店は${memberCap()}人まで)`,buy(){}},
+    desc:()=>isSet()?`セット卓には入らず、提供や片づけ、掃除をします(この店は${memberCap()}人まで)`:`1卓に1人まで入って打ち、手が空いたら提供や片づけ、掃除をします(この店は${memberCap()}人まで)`,buy(){}},
   hall:{name:'ホールスタッフを採用',lv:()=>S.hall?'1/1人':'0/1人',cost:()=>0,max:()=>!!S.hall,lock:no,pickFirst:'hall',
     desc:()=>'麻雀は打たず、提供に専念します。メンバーが卓に入っていても注文を回せます(1人)',buy(){}}
 };
 function tableRow(i){return{name:`${i+1}番卓`,lv:()=>TIERS[S.tiers[i]].short,
-  alt:{text:()=>tables[i].broken||tables[i].manual?'修理':S.modes[i]==='set'?'セット':'フリー',cls:()=>tables[i].broken||tables[i].manual?'alt':S.modes[i]==='set'?'alt set':'alt',
-    click(){if(tables[i].broken||tables[i].manual){repairMenu(tables[i]);return;}const tb=tables[i];if(tb.state==='play'||occ(tb)>0){toast('卓が空いたら切り替えられます');return;}S.modes[i]=S.modes[i]==='set'?'free':'set';save();
-      toast(`${i+1}番卓を${S.modes[i]==='set'?'セット卓(4人組の時間貸し)':'フリー卓(1人客を組み合わせ)'}にしました`);}},cost:()=>upCost(i,S.tiers[i]),max:()=>S.tiers[i]>=2,lock:no,
+  alt:{text:()=>'修理',cls:()=>tables[i].broken||tables[i].manual?'alt':'alt hide',click(){if(tables[i].broken||tables[i].manual)repairMenu(tables[i]);}},cost:()=>upCost(i,S.tiers[i]),max:()=>S.tiers[i]>=2,lock:no,
   desc:()=>{const t=S.tiers[i];if(tables[i].broken)return t<2?'故障中。入れ替えるか、修理ボタンから対応を選べます':'故障中。修理ボタンから対応を選べます';if(tables[i].manual)return'全自動が止まり、手積みで営業中';if(t>=2)return`${TIERS[2].name}。半荘${TIERS[2].dur}秒、場代×${TIERS[2].mult}`;const n=TIERS[t+1];return`${n.name}へ。半荘${TIERS[t].dur}→${n.dur}秒、場代×${n.mult}`;},
   buy(){S.tiers[i]++;tables[i].broken=false;tables[i].manual=false;tables[i].repairing=false;const s=SLOTS[i];burst(s.x,s.y,24,['#ffd35a','#fff']);toast(`${i+1}番卓を${TIERS[S.tiers[i]].name}に入れ替えました`);}};}
 function decoRow(k){const d=DECO[k],L=()=>S.deco[k],pc=n=>+(d.b*100*n/DECO_STEP).toFixed(1);return{key:'deco:'+k,name:d.name,lv:()=>L()?`${d.grades[dg(k)-1]} (${L()}/${d.max})`:'',
@@ -1335,6 +1352,7 @@ function renderTab(){
     addSec(L,'メンバー');addRow(L,ROW.member);S.members.forEach((m,i)=>crewRow({m,role:'member',i}));
     addSec(L,'ホールスタッフ');addRow(L,ROW.hall);if(S.hallStaff&&S.hall)crewRow({m:S.hallStaff,role:'hall'});
     refresh();return;}
+  if(tab==='reg'&&isSet()){L.innerHTML='<div class="note">セット専門店には常連はいません。4人組のお客さんが、時間貸しで卓を使います。</div>';return;}
   if(tab==='reg'){REG.forEach((r,i)=>{const d=document.createElement('div');d.className='row';L.appendChild(d);
       rows.push({reg:i,el:d});});refresh();return;}
   tabRows().forEach(u=>addRow(L,u));
@@ -1446,7 +1464,7 @@ listEl.addEventListener('touchend',()=>{if(drag&&drag.fromList)dEnd();});
 listEl.addEventListener('touchcancel',()=>{if(drag&&drag.fromList)dEnd();});
 sheetEl.addEventListener('click',e=>{if(Date.now()<dragUntil){e.stopPropagation();e.preventDefault();}},true); // ドラッグ直後のタップ扱いを無効化
 document.addEventListener('gesturestart',e=>e.preventDefault()); // iOSのピンチズーム抑止
-document.getElementById('rushBtn').onclick=()=>{if(proOn())return;playAd(()=>{S.proUntil=Date.now()+120000;if(!ents.some(e=>e.type==='pro'))mkPro();spawnT=0;toast('麻雀プロが来店!2分間、客足が2倍になります');save();});};
+document.getElementById('rushBtn').onclick=()=>{if(proOn())return;playAd(()=>{S.proUntil=Date.now()+120000;if(!ents.some(e=>e.type==='pro')&&!isSet())mkPro();spawnT=0;toast('麻雀プロが来店!2分間、客足が2倍になります');save();});};
 
 let toastTimer;function toast(m){const t=document.getElementById('toast');t.textContent=m;t.style.opacity=1;clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.style.opacity=0,1800);}
 const modal=document.getElementById('modal'),mcard=document.getElementById('mcard');
@@ -1536,11 +1554,11 @@ const LAND={
 };
 const proj=([lon,lat])=>[(lon-128)*20,(46-lat)*24];
 let mapMode=null,mapSel=0;
-function stageState(i){if(!S.started)return i===0?'next':'locked';if(i<S.shops.length)return'open';
-  if(i===S.shops.length&&(i===0?!S.started:(isNewest()&&(goalMet()||S.cleared))))return'next';return'locked';}
-function openMap(mode){mapMode=mode;mapSel=mode==='view'?S.active:Math.min(S.shops.length,STAGES.length-1);if(mode==='start')mapSel=0;
+function stageState(i){if(!S.started)return i===0?'next':'locked';const n=nextStage();if(i<n)return'open';
+  if(i===n&&i>0&&newestCleared())return'next';return'locked';}
+function openMap(mode){mapMode=mode;mapSel=mode==='view'?S.stage:Math.min(nextStage(),STAGES.length-1);if(mode==='start')mapSel=0;
   document.getElementById('map').classList.add('show');document.getElementById('mapClose').style.display=mode==='start'?'none':'';
-  document.getElementById('mapSub').textContent=mode==='start'?'1号店を出す町を選んでください':mode==='open'?`${STAGES[S.shops.length].no}号店を出す街を選んでください`:'店をタップすると切り替えられます';
+  document.getElementById('mapSub').textContent=mode==='start'?'1号店を出す町を選んでください':mode==='open'?`${STAGES[nextStage()].no}号店を出す街を選んでください`:'店をタップすると切り替えられます';
   renderMap();}
 function closeMap(){document.getElementById('map').classList.remove('show');mapMode=null;}
 document.getElementById('mapClose').onclick=closeMap;
@@ -1549,17 +1567,17 @@ document.getElementById('mapOpen').onclick=()=>openMap('view');
 function renderMap(){const svg=document.getElementById('mapSvg');let h='';
   h+=Object.values(LAND).map(pts=>`<path d="M${pts.map(p=>proj(p).map(v=>v.toFixed(1)).join(',')).join('L')}Z" fill="#efe7cf" stroke="#b7a982" stroke-width="1.5" stroke-linejoin="round"/>`).join('');
   // 出店した店を結ぶ線
-  const op=STAGES.slice(0,S.shops.length).map(g=>proj(g.pos));
+  const op=STAGES.slice(0,nextStage()).map(g=>proj(g.pos));
   if(op.length>1)h+=`<polyline points="${op.map(p=>p.join(',')).join(' ')}" fill="none" stroke="#c0392b" stroke-width="2" stroke-dasharray="5 4" opacity=".7"/>`;
   STAGES.forEach((g,i)=>{const [x,y]=proj(g.pos),st=stageState(i),sel=i===mapSel;
-    const col=st==='open'?(i===S.active?'#1e7a57':'#2f8f6a'):st==='next'?'#d98a12':'#8f969c';
+    const col=st==='open'?(i===S.stage?'#1e7a57':'#2f8f6a'):st==='next'?'#d98a12':'#8f969c';
     h+=`<g class="pin" data-i="${i}" tabindex="0" role="button" aria-label="${g.no}号店 ${g.area}">`;
     if(st==='next')h+=`<circle class="pulse" cx="${x}" cy="${y}" r="9" fill="none" stroke="#d98a12" stroke-width="3"/>`;
     h+=`<circle class="ring" cx="${x}" cy="${y}" r="${sel?12:9}" fill="${col}" stroke="${sel?'#fff':'#1b1206'}" stroke-width="${sel?3:1.5}"/>`;
     h+=`<text x="${x}" y="${y+4}" text-anchor="middle" font-size="10" font-weight="700" fill="#fff">${st==='locked'?'?':g.no}</text>`;
     const lx=x+(g.pos[0]>137?-16:16),anc=g.pos[0]>137?'end':'start';
     h+=`<text x="${lx}" y="${y-8}" text-anchor="${anc}" font-size="11" font-weight="700" fill="#1b2430" stroke="#f7f2e2" stroke-width="3" paint-order="stroke">${st==='locked'?'???':g.area}</text>`;
-    if(st!=='locked')h+=`<text x="${lx}" y="${y+6}" text-anchor="${anc}" font-size="9" fill="#34414f" stroke="#f7f2e2" stroke-width="2.5" paint-order="stroke">${st==='open'?(i===S.active?'表示中':'営業中'):'出店できます'}</text>`;
+    if(st!=='locked')h+=`<text x="${lx}" y="${y+6}" text-anchor="${anc}" font-size="9" fill="#34414f" stroke="#f7f2e2" stroke-width="2.5" paint-order="stroke">${st==='open'?(i===S.stage?'表示中':'営業中')+(setIdxOf(i)>=0?'・セット店':''):'出店できます'}</text>`;
     h+='</g>';});
   svg.innerHTML=h;
   svg.querySelectorAll('.pin').forEach(p=>{const f=()=>{mapSel=+p.dataset.i;renderMap();};p.onclick=f;p.onkeydown=ev=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();f();}};});
@@ -1567,15 +1585,21 @@ function renderMap(){const svg=document.getElementById('mapSvg');let h='';
 function renderMapPanel(){const P=document.getElementById('mapPanel'),i=mapSel,g=STAGES[i],st=stageState(i);
   const info=`<div class="mp-grid"><span>場所</span><b>${g.place}</b><span>最大卓数</span><b>${g.max}卓</b>${i?`<span>場代</span><b>1号店の${g.fee}倍</b><span>物価</span><b>1号店の${g.cost}倍</b>`:''}<span>目標</span><b>売上 ¥${fmt(g.goal.earn)}、評判 ★${g.goal.rep.toFixed(1)}</b>${g.open?`<span>出店費用</span><b>¥${fmt(g.open)}</b>`:''}</div>`;
   let body='';
-  if(st==='open'){const sh=S.shops[i];body=`<h3>${g.no}号店 ${esc((i===S.active?S.shopName:S.shops[i].shopName)||g.area)}</h3><div class="mp-sub">${i===S.active?'いま表示している店です':'営業中。見ていない間は最高の売上ペースの1割が入ります'}</div>${info}`+
-      (i===S.active?`<button class="mbtn sec" id="mpGo">店に戻る</button>`:`<button class="mbtn pri" id="mpGo">この店へ移動する</button>`);}
+  if(st==='open'){const fi=freeIdxOf(i),si=setIdxOf(i),nm=k=>esc((k===S.active?S.shopName:S.shops[k].shopName)||g.area);
+    const go=(k,t)=>k===S.active?`<button class="mbtn sec" data-go="${k}">${t}に戻る</button>`:`<button class="mbtn pri" data-go="${k}">${t}へ移動する</button>`;
+    body=`<h3>${g.no}号店 ${nm(fi)}</h3><div class="mp-sub">${fi===S.active?'いま表示している店です':'営業中。見ていない間は最高の売上ペースの1割が入ります'}</div>${info}`+go(fi,'この店');
+    if(i>=1){if(si>=0)body+=`<h3 class="mp-set">セット専門店 ${nm(si)}</h3><div class="mp-sub">${si===S.active?'いま表示している店です':'4人組の時間貸し専門。営業中'}</div>`+go(si,'セット専門店');
+      else{const c=setOpenCost(i),short=S.money<c;body+=`<h3 class="mp-set">セット専門店</h3><div class="mp-sub">4人組の時間貸しだけを受ける店を、この街にもう1店出せます。出店費用 ¥${fmt(c)}</div>`+
+        `<button class="mbtn sec" id="mpSet" ${short?'disabled':''}>${short?`あと ¥${fmt(c-S.money)} 貯めると出せます`:'セット専門店を出す'}</button>`;}}}
   else if(st==='next'){const short=S.money<g.open;
     body=`<h3>${g.no}号店 ${g.area}</h3><div class="mp-sub">${i===0?'ここから雀荘経営が始まります':'新しい店に持っていけるのは所持金だけです。スタッフと常連は今の店に残ります'}</div>${info}`+
       `<button class="mbtn pri" id="mpGo" ${short?'disabled':''}>${i===0?'ここで開業する':short?`あと ¥${fmt(g.open-S.money)} 貯めると出店できます`:'出店費用を払って出店する'}</button>`;}
   else{const prev=STAGES[i-1];body=`<h3>${g.no}号店 ???</h3><div class="mp-sub">${prev?`${prev.no}号店(${prev.area})の目標を達成して出店すると、次の街が選べるようになります`:''}</div>`;}
-  P.innerHTML=body;const b=document.getElementById('mpGo');if(!b)return;
-  b.onclick=()=>{if(st==='open'){closeMap();if(i!==S.active)switchShop(i);}
-    else if(st==='next'){if(i===0){closeMap();askBossName(()=>{S.started=1;S.opened=0;save();setPre();prepareOpening();},true);return;document.getElementById('goal')._k=null;}
+  P.innerHTML=body;
+  P.querySelectorAll('[data-go]').forEach(x=>x.onclick=()=>{const k=+x.dataset.go;closeMap();if(k!==S.active)switchShop(k);});
+  const sb=document.getElementById('mpSet');if(sb)sb.onclick=()=>{if(S.money<setOpenCost(i))return;closeMap();newSetStore(i);};
+  const b=document.getElementById('mpGo');if(!b)return;
+  b.onclick=()=>{if(st==='next'){if(i===0){closeMap();askBossName(()=>{S.started=1;S.opened=0;save();setPre();prepareOpening();},true);return;document.getElementById('goal')._k=null;}
       else if(S.money>=g.open){closeMap();newStore();}}};}
 // ---------- ストーリー「日本中に、ひだまりを」 ----------
 // 話し手: boss=店長 tanaka=田中さん letter=祖父の手紙 rival=雀王グループの若社長 pro=麻雀プロ staff=スタッフ narr=ナレーション
