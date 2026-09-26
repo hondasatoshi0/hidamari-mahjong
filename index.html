@@ -135,7 +135,10 @@ nav button svg{display:block}
 #bonus{min-height:48px;font-size:14px;max-width:calc(100% - 24px);white-space:normal}
 #toast{max-width:calc(100% - 24px);white-space:normal;text-align:center;font-size:13px}
 @media (max-height:700px){.money{font-size:24px}header{padding-top:6px}.hd-sub{font-size:12px}#sheet #list{height:26vh;height:26dvh}}
-.hd-btns{display:flex;align-items:center;gap:8px}
+.hd-btns{display:flex;align-items:center;gap:6px;flex:none}
+.money{white-space:nowrap;font-size:clamp(20px,6.4vw,28px)}
+#rushBtn{padding:0 12px}
+@media (max-height:700px){.money{font-size:clamp(20px,6vw,24px)}}
 #mapOpen{width:44px;height:44px;flex:none;border:0;border-radius:50%;background:var(--panel2);color:var(--ink);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:inset 0 0 0 1.5px var(--line)}
 #mapOpen:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 #bossName{width:100%;min-height:48px;font:inherit;font-size:17px;padding:0 14px;border-radius:12px;border:1.5px solid var(--line);background:var(--panel2);color:var(--ink);-webkit-user-select:text;user-select:text;margin-top:4px}
@@ -253,6 +256,37 @@ body.tut .hd-btns{visibility:hidden} /* チュートリアル中は右上をス�
 #coachTip button{min-height:40px;padding:0 16px;border-radius:999px;font:inherit;font-weight:700;font-size:13px;cursor:pointer}
 #coachTip .ct-next{border:0;background:#c0392b;color:#fff}
 @media (prefers-reduced-motion: reduce){#coachRing{animation:none}}
+/* 課金ショップ */
+#shopOpen{width:44px;height:44px;flex:none;border:0;border-radius:50%;background:var(--gold);color:#1b1206;display:flex;align-items:center;justify-content:center;cursor:pointer}
+#shopOpen:focus-visible,#spdBtn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+#spdBtn{position:absolute;left:8px;top:8px;z-index:5;display:none;min-height:36px;min-width:52px;padding:0 12px;border-radius:999px;border:1.5px solid rgba(255,255,255,.75);
+  background:rgba(20,20,30,.6);color:#fff;font:inherit;font-weight:700;font-size:13px;cursor:pointer}
+#spdBtn.show{display:block}
+#spdBtn.fast{background:var(--gold);border-color:var(--gold);color:#1b1206}
+#iap{position:fixed;inset:0;z-index:9;display:none;flex-direction:column;background:var(--bg);padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+#iap.show{display:flex}
+.iap-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;background:linear-gradient(135deg,#7a4a12,#b87712);color:#fff}
+.iap-title{font-family:"Dela Gothic One",sans-serif;font-size:20px}
+.iap-sub{font-size:12.5px;opacity:.9;margin-top:2px}
+#iapClose{border:1.5px solid rgba(255,255,255,.75);background:transparent;color:#fff;border-radius:999px;padding:0 16px;min-height:44px;font:inherit;font-weight:700;cursor:pointer;flex:none}
+#iapBody{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;width:100%;max-width:560px;margin:0 auto;padding:4px 16px 24px}
+.iap-pack{margin-top:14px;padding:16px;border-radius:16px;background:var(--panel);border:2px solid var(--gold);position:relative;overflow:hidden}
+.iap-pack .tag{position:absolute;right:12px;top:12px;font-size:11px;font-weight:700;background:#c0392b;color:#fff;border-radius:999px;padding:3px 10px}
+.iap-pack h3{margin:0 0 4px;font-size:17px;padding-right:80px}
+.iap-pack ul{margin:6px 0 12px;padding-left:1.2em;font-size:13.5px;color:var(--sub);line-height:1.7}
+.iap-pack .buy{width:100%}
+#iapBody .row{background:transparent}
+.spd-seg{display:flex;gap:6px;margin-top:8px}
+.spd-seg button{flex:1;min-height:40px;border-radius:10px;border:1.5px solid var(--accent);background:transparent;color:var(--accent);font:inherit;font-weight:700;font-size:14px;cursor:pointer}
+.spd-seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.cos-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:10px 0 4px}
+.cos{display:flex;flex-direction:column;gap:6px;padding:10px;border-radius:12px;background:var(--panel);border:1.5px solid var(--line)}
+.cos.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.cos .sw{height:44px;border-radius:8px;display:flex;align-items:center;justify-content:center;gap:4px}
+.cos .sw i{display:block;border-radius:2px}
+.cos b{font-size:13.5px}
+.cos .buy{min-width:0;width:100%;min-height:40px;font-size:13.5px}
+.cos .buy.eq{background:transparent;color:var(--accent);box-shadow:inset 0 0 0 1.5px var(--accent)}
 </style>
 </head>
 <body>
@@ -260,7 +294,7 @@ body.tut .hd-btns{visibility:hidden} /* チュートリアル中は右上をス�
   <header>
     <div class="hd-top">
       <div class="money" id="money">¥0</div>
-      <div class="hd-btns"><button id="rushBtn" type="button">プロを呼ぶ</button><button id="mapOpen" type="button" aria-label="全国マップを開く" title="全国マップ"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 6.5 9 4l6 2.5L21 4v13.5L15 20l-6-2.5L3 20z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 4v13.5M15 6.5V20" stroke="currentColor" stroke-width="2"/></svg></button></div>
+      <div class="hd-btns"><button id="rushBtn" type="button">プロを呼ぶ</button><button id="shopOpen" type="button" aria-label="ショップを開く" title="ショップ"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M5 8h14l-1.2 12H6.2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 10V6.5a3 3 0 0 1 6 0V10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button><button id="mapOpen" type="button" aria-label="全国マップを開く" title="全国マップ"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 6.5 9 4l6 2.5L21 4v13.5L15 20l-6-2.5L3 20z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 4v13.5M15 6.5V20" stroke="currentColor" stroke-width="2"/></svg></button></div>
     </div>
     <div class="hd-sub"><span class="shop" id="shopLine">雀荘 ひだまり</span><span class="rate" id="rate"></span></div>
   </header>
@@ -275,6 +309,7 @@ body.tut .hd-btns{visibility:hidden} /* チュートリアル中は右上をス�
   <div id="stage">
     <canvas id="cv" aria-label="雀荘の店内"></canvas>
     <div id="flash"></div>
+    <button id="spdBtn" type="button" aria-label="営業の速さを切り替える"></button>
     <div id="intro" aria-label="プロローグ">
       <svg class="in-bg" viewBox="0 0 360 640" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
         <defs><linearGradient id="inSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f7c9a8"/><stop offset=".55" stop-color="#fde8d4"/><stop offset="1" stop-color="#fff4e3"/></linearGradient></defs>
@@ -330,6 +365,10 @@ body.tut .hd-btns{visibility:hidden} /* チュートリアル中は右上をス�
 </div>
 <div id="modal"><div class="mcard" id="mcard"></div></div>
 <div class="coachBlk"></div><div class="coachBlk"></div><div class="coachBlk"></div><div class="coachBlk"></div><div id="coachRing"></div><div id="coachTip" role="dialog" aria-live="polite"></div><button type="button" id="coachSkip">チュートリアルをスキップ</button>
+<div id="iap" role="dialog" aria-label="ショップ">
+  <div class="iap-head"><div><div class="iap-title">ショップ</div><div class="iap-sub">お店をもっと快適に、もっと自分らしく</div></div><button type="button" id="iapClose">閉じる</button></div>
+  <div id="iapBody"></div>
+</div>
 <div id="map" role="dialog" aria-label="全国マップ">
   <div class="map-head"><div><div class="map-title">全国マップ</div><div class="map-sub" id="mapSub"></div></div><button type="button" id="mapClose">閉じる</button></div>
   <div class="map-body"><svg id="mapSvg" viewBox="22 2 342 364" preserveAspectRatio="xMidYMid meet"></svg></div>
@@ -349,9 +388,33 @@ const TIERS=[
   {name:'業務用麻雀卓',short:'業務用',dur:8,mult:2.2,yk:0.05,back:'#3a7bd5'}
 ];
 const upCost=(i,t)=>Math.round((t===0?3000:40000)*Math.pow(1.35,i));
-// 留守中の営業:店長代行のレベルで上限時間が延びる。効率は25%(広告で2倍)
-const OFFCAP=[2,4,8,12],OFF_EFF=0.25;
+// 留守中の営業:店長代行のレベルで上限時間が延びる。効率は25%(留守番ブーストで40%、広告で2倍)
+const OFFCAP=[2,4,8,12],OFF_EFF=0.25,OFF_EFF_PLUS=0.4;
 const MGR_IAP=[160,480,980]; // 店長代行のレベルアップは課金のみ(円、レベルごと)
+// 課金アイテム(円)。購入状態はS.iapに持ち、店をまたいで共通。データをリセットしても消さない
+const IAP={noAds:{name:'広告スキップ永久パス',yen:610},speed:{name:'倍速モード',yen:480},off:{name:'留守番ブースト',yen:370},starter:{name:'スターターパック',yen:370}};
+const SPEEDS=[1,1.5,2];
+const STARTER_MONEY=5000; // スターターパックの資金(物価で増える)
+// 見た目だけの着せ替え。stdは最初から持っている
+const COS={
+  uniform:{name:'スタッフの制服',items:[
+    {k:'std',n:'白シャツとベスト',body:'#f3f3f3',vest:'#1c1c1c',tie:'#b8182e'},
+    {k:'happi',n:'ひだまり法被',body:'#d8452f',vest:'#f3e3c0',tie:'#1c1c1c',yen:120},
+    {k:'samue',n:'藍の作務衣',body:'#2f4a7a',vest:'#1d2c4a',tie:'#e8d9b0',yen:120},
+    {k:'butler',n:'執事の燕尾服',body:'#26282e',vest:'#f3f3f3',tie:'#c8a04a',yen:250}]},
+  mat:{name:'卓のマット',items:[
+    {k:'std',n:'定番の緑',c:'#2e7d4f'},{k:'navy',n:'深い紺',c:'#233f7a',yen:120},
+    {k:'wine',n:'ワインレッド',c:'#7a2334',yen:120},{k:'violet',n:'紫紺',c:'#4a2f78',yen:120}]},
+  tile:{name:'牌の背',items:[
+    {k:'std',n:'定番',c:null},{k:'sakura',n:'桜色',c:'#f19bb5',yen:120},
+    {k:'black',n:'漆黒',c:'#2a2c33',yen:120},{k:'gold',n:'黄金',c:'#d9aa3a',yen:250}]}
+};
+const cosItem=cat=>COS[cat].items.find(i=>i.k===((S.iap.wear||{})[cat]||'std'))||COS[cat].items[0];
+const hasCos=(cat,k)=>k==='std'||!!(S.iap.own||{})[cat+':'+k];
+const noAds=()=>!!S.iap.noAds;
+const adPre=()=>noAds()?'':'広告を見て'; // 広告スキップ購入後はボタンから「広告を見て」を外す
+const gameSpeed=()=>S.iap.speed?(S.iap.mul||1):1;
+const offEff=()=>S.iap.off?OFF_EFF_PLUS:OFF_EFF;
 const YAKU=['国士無双','四暗刻','大三元','字一色','緑一色','小四喜','清老頭','九蓮宝燈'];
 const SLOTS=[];
 const ROW_GAP=134; // 卓の縦の間隔
@@ -470,7 +533,8 @@ const capOf=(m,k)=>m.cap?m.cap[k]:5;
 // 採用費:今のステータスと伸びしろ(上限)が高いほど高い。ホールスタッフは麻雀を打たないので麻雀は計算に入れない
 function hireCost(c,role){let cur=0,room=0;STATS.forEach(([k])=>{if(role==='hall'&&k==='mj')return;cur+=c[k];room+=capOf(c,k)-c[k];});
   const base=role==='hall'?4:5;return Math.round(60*Math.pow(1.3,cur-base)*Math.pow(1.12,room)*CM()/10)*10;}
-function clampS(d){if(!d.story){d.story={};if(d.started){['prologue','ch0_intro','ch0_open'].forEach(k=>d.story[k]=1);const n=(d.shops||[]).length||1;
+function clampS(d){d.iap=Object.assign({noAds:0,speed:0,mul:1,off:0,starter:0},d.iap||{});d.iap.own=d.iap.own||{};d.iap.wear=d.iap.wear||{};
+  if(!d.story){d.story={};if(d.started){['prologue','ch0_intro','ch0_open'].forEach(k=>d.story[k]=1);const n=(d.shops||[]).length||1;
     for(let i=0;i<n;i++)d.story[`ch${i}_intro`]=1;for(let i=0;i<n-1;i++)d.story[`ch${i}_end`]=1;if((d.shops||[]).length>1)d.story.pro_meet=1;}}if(d.opened==null){d.opened=1;(d.shops||[]).forEach(sh=>{if(sh.opened==null)sh.opened=1;});}if(!d.boss)d.boss={name:'店長',spd:3,cook:2,charm:3,mj:3,sta:5,cap:{spd:5,cook:5,charm:5,mj:5,sta:5}};if(d.started==null)d.started=(d.total||0)>0?1:0;d.wait=1;(d.shops||[]).forEach(sh=>sh.wait=1);d.staff=Math.min(6,d.staff||1);
   if(!d.members){d.members=[];for(let i=0;i<d.staff;i++)d.members.push(genStaffRaw(d));}
   d.members=d.members.slice(0,6);d.staff=d.members.length;
@@ -720,7 +784,7 @@ function yakuman(tb){playScene('first_yakuman');
   const yk=document.getElementById('yk');yk.classList.remove('show');void yk.offsetWidth;yk.classList.add('show');
   const fl=document.getElementById('flash');fl.style.transition='none';fl.style.opacity=.7;requestAnimationFrame(()=>{fl.style.transition='opacity .5s';fl.style.opacity=0;});
   setTimeout(()=>yk.classList.remove('show'),2400);
-  bonusAmt=amt;bonusT=10;const b=document.getElementById('bonus');b.textContent='広告で役満ボーナスをもう一度 +¥'+fmt(amt);b.style.display='block';
+  bonusAmt=amt;bonusT=10;const b=document.getElementById('bonus');b.textContent=(noAds()?'':'広告で')+'役満ボーナスをもう一度 +¥'+fmt(amt);b.style.display='block';
 }
 document.getElementById('bonus').onclick=()=>{const amt=bonusAmt;bonusT=0;document.getElementById('bonus').style.display='none';
   playAd(()=>{earn(amt,AISLE,HI/2,'#ffd35a');toast('役満ボーナス +¥'+fmt(amt));});};
@@ -738,7 +802,7 @@ function repairMenu(tb){
   if(tb.repairing){mcard.innerHTML=`<h2>${i+1}番卓</h2><p>修理業者が作業しています。もう少しお待ちください。</p><button class="mbtn sec" id="rmX">閉じる</button>`;}
   else{mcard.innerHTML=`<h2>${i+1}番卓が${tb.broken?'故障しています':'手積みで営業中です'}</h2>
     <p>${tb.broken?'自動で牌を積む仕組みが止まりました。このままでは卓が使えません。':'全自動の機能は止まったままです。半荘が長くなり、場代も手積み卓と同じになっています。'}</p>
-    <button class="mbtn pri" id="rmAd">広告を見てすぐ直す</button>
+    <button class="mbtn pri" id="rmAd">${adPre()}すぐ直す</button>
     <button class="mbtn sec" id="rmTech" ${S.money<c?'disabled':''}>修理を呼ぶ ¥${fmt(c)}</button>
     ${tb.broken?'<button class="mbtn sec" id="rmMan">手積みでしのぐ</button>':''}
     <button class="mbtn sec" id="rmX">閉じる</button>`;}
@@ -1067,7 +1131,7 @@ function drawDirt(tb,x,y){if(tb.dirt<.25)return;const n=Math.min(9,Math.floor(tb
     if(i%3===0){ctx.strokeStyle='rgba(90,55,25,.55)';ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(px,py,3.2,0,7);ctx.stroke();}
     else{ctx.fillStyle='rgba(70,45,20,.6)';ctx.fillRect(px,py,1.6,1.6);ctx.fillRect(px+2.5,py+1,1.2,1.2);}}}
 function drawTable(tb){
-  const s=SLOTS[tb.slot],t=S.tiers[tb.slot],T=TIERS[tierOf(tb)],x=s.x,y=s.y,play=tb.state==='play',p=play?Math.min(1,tb.t/(tb.dur||T.dur)):0;
+  const s=SLOTS[tb.slot],t=S.tiers[tb.slot],T=TIERS[tierOf(tb)],back=cosItem('tile').c||T.back,mat=cosItem('mat'),x=s.x,y=s.y,play=tb.state==='play',p=play?Math.min(1,tb.t/(tb.dur||T.dur)):0;
   ctx.fillStyle=t===2?'#1d1d22':'#5a3b26';OFF.forEach(o=>{rr(x+o[0]*1.08-9,y+o[1]*1.08-9,18,18,t===2?6:3);ctx.fill();});
   for(let k=0;k<4;k++){const q=sidePos(tb,k);ctx.fillStyle='rgba(0,0,0,.25)';rr(q.x-6,q.y-5,13,13,3);ctx.fill();
     ctx.fillStyle='#f6f6f3';rr(q.x-6.5,q.y-6.5,13,13,3);ctx.fill();ctx.strokeStyle='#c9c9c4';ctx.lineWidth=1;ctx.stroke();
@@ -1077,19 +1141,19 @@ function drawTable(tb){
   ctx.fillStyle='rgba(0,0,0,.3)';rr(x-30,y-28,64,64,8);ctx.fill();
   if(t===0){ // 普通の机に麻雀マット
     ctx.fillStyle='#8a5a34';rr(x-30,y-30,60,60,3);ctx.fill();ctx.strokeStyle='#6d4526';ctx.lineWidth=1;ctx.strokeRect(x-27,y-27,54,54);
-    ctx.fillStyle='#2e7d4f';rr(x-24,y-24,48,48,10);ctx.fill();
-    if(play&&p<.15)shuffle(tb,x,y,T.back);
-    else if(play)tilesRing(x,y,(p-.15)/.85,T.back);
+    ctx.fillStyle=mat.c;rr(x-24,y-24,48,48,10);ctx.fill();
+    if(play&&p<.15)shuffle(tb,x,y,back);
+    else if(play)tilesRing(x,y,(p-.15)/.85,back);
   }else if(t===1){ // 家庭用
-    ctx.fillStyle='#d9ccb0';rr(x-31,y-31,62,62,10);ctx.fill();ctx.fillStyle='#2f8a5a';rr(x-25,y-25,50,50,5);ctx.fill();
-    if(play)(tb.manual&&p<.15?shuffle(tb,x,y,T.back):tilesRing(x,y,tb.manual?(p-.15)/.85:p,T.back));
+    ctx.fillStyle='#d9ccb0';rr(x-31,y-31,62,62,10);ctx.fill();ctx.fillStyle=mat.k==='std'?'#2f8a5a':mat.c;rr(x-25,y-25,50,50,5);ctx.fill();
+    if(play)(tb.manual&&p<.15?shuffle(tb,x,y,back):tilesRing(x,y,tb.manual?(p-.15)/.85:p,back));
     ctx.fillStyle='#e8dfca';ctx.beginPath();ctx.arc(x,y,6.5,0,7);ctx.fill();ctx.fillStyle='rgba(20,30,40,.8)';ctx.beginPath();ctx.arc(x,y,4.8,0,7);ctx.fill();
     if(play){ctx.fillStyle='#fff';ctx.fillRect(x-2.5+Math.sin(gt*9)*.6,y-1.5,2,2);ctx.fillRect(x+.5,y-.5,2,2);}
   }else{ // 業務用
     ctx.fillStyle='#2b2f36';rr(x-33,y-33,66,66,8);ctx.fill();ctx.strokeStyle='#4a505a';ctx.lineWidth=1;rr(x-31,y-31,62,62,7);ctx.stroke();
-    ctx.fillStyle='#1f5f8a';rr(x-26,y-26,52,52,4);ctx.fill();
+    ctx.fillStyle=mat.k==='std'?'#1f5f8a':mat.c;rr(x-26,y-26,52,52,4);ctx.fill();
     for(let k=0;k<4;k++){ctx.save();ctx.translate(x,y);ctx.rotate(k*Math.PI/2);ctx.fillStyle='#0c0f12';ctx.fillRect(-6,-31.5,12,3);ctx.fillStyle=play?'#63ff9a':'#1d4a2d';ctx.fillRect(-5,-31,10,2);ctx.restore();}
-    if(play)(tb.manual&&p<.15?shuffle(tb,x,y,T.back):tilesRing(x,y,tb.manual?(p-.15)/.85:p,T.back));
+    if(play)(tb.manual&&p<.15?shuffle(tb,x,y,back):tilesRing(x,y,tb.manual?(p-.15)/.85:p,back));
     ctx.fillStyle='#15181d';rr(x-6,y-6,12,12,2);ctx.fill();const lc=['#ff5a5a','#5aff8a','#5ab0ff','#ffd35a'];
     lc.forEach((c,i)=>{ctx.fillStyle=play&&Math.floor(gt*2)%4===i?c:'#333';ctx.fillRect(x-4+(i%2)*6,y-4+(i>>1)*6,2,2);});
   }
@@ -1113,8 +1177,9 @@ function drawPerson(e){
   ctx.fillStyle='rgba(0,0,0,.25)';ctx.beginPath();ctx.ellipse(1,1.5,6,10,0,0,7);ctx.fill();
   const playing=e.table&&e.table.state==='play'&&e.state==='seated';
   if(playing){ctx.fillStyle='#f0c8a0';const k=Math.sin(gt*6+e.id)>0.6?2:0;ctx.beginPath();ctx.arc(7+k,-5,2.3,0,7);ctx.arc(7,5,2.3,0,7);ctx.fill();}
-  ctx.fillStyle=e.body;ctx.beginPath();ctx.ellipse(0,0,5.5,9.5,0,0,7);ctx.fill();ctx.strokeStyle='rgba(20,14,10,.75)';ctx.lineWidth=1.6;ctx.stroke();
-  if(e.type==='staff'){ctx.fillStyle='#1c1c1c';ctx.fillRect(-2,-9,4,18);ctx.fillStyle='#b8182e';ctx.fillRect(3,-1.5,2,3);}
+  const uni=(e.type==='staff'||e.type==='hall')?cosItem('uniform'):null;
+  ctx.fillStyle=uni?uni.body:e.body;ctx.beginPath();ctx.ellipse(0,0,5.5,9.5,0,0,7);ctx.fill();ctx.strokeStyle='rgba(20,14,10,.75)';ctx.lineWidth=1.6;ctx.stroke();
+  if(e.type==='staff'){ctx.fillStyle=uni.vest;ctx.fillRect(-2,-9,4,18);ctx.fillStyle=uni.tie;ctx.fillRect(3,-1.5,2,3);}
   if(e.type==='hall'){ctx.fillStyle='#2f6b9a';ctx.fillRect(-1,-8,5,16);}
   if(e.type==='boss'){ctx.fillStyle='#f4f4f4';ctx.beginPath();ctx.moveTo(5.5,-3);ctx.lineTo(1.5,0);ctx.lineTo(5.5,3);ctx.fill();ctx.fillStyle='#c8a04a';ctx.fillRect(3.5,-.8,2,1.6);}
   if(e.type==='tech'){ctx.fillStyle='#3a3a3a';ctx.fillRect(-3,-9,2,18);}
@@ -1252,7 +1317,7 @@ function renderTab(){
     <div class="note">汚れた卓はお客さんに避けられ、評判も下がります。全自動卓は時々故障するので、店内の卓をタップして対応してください。お店を離れている間も売上が貯まります(店長代行で最大12時間分まで延ばせます)。プレイ中の卓をタップすると、半荘が少し早く進みます。</div>
     <div class="sec">データ</div><div class="row"><div><div class="nm">データをリセット</div><div class="ds">最初からやり直します</div></div><button class="buy" id="resetBtn">リセット</button></div>`;
     let armed=false;document.getElementById('resetBtn').onclick=e=>{if(!armed){armed=true;e.target.textContent='もう一度押す';setTimeout(()=>{armed=false;e.target.textContent='リセット';},3000);return;}
-      try{localStorage.removeItem(KEY);}catch(_){}S=fresh();REG=REGS[0];applyLayout();initWorld();renderTab();setPre();playScene('prologue',()=>openMap('start'));toast('リセットしました');};
+      const iap=S.iap;try{localStorage.removeItem(KEY);}catch(_){}S=fresh();S.iap=iap;/* 課金した内容はリセットしても残す */REG=REGS[0];applyLayout();initWorld();renderTab();setPre();playScene('prologue',()=>openMap('start'));toast('リセットしました');};
     refresh();return;}
   if(tab==='staff'){addSec(L,'店長');{const d=document.createElement('div');d.className='row';L.appendChild(d);
       d.innerHTML=`<div><div class="nm">${esc(bossLabel())}<small>あなた</small><small class="sst"></small></div><div class="ds">手が空いていればスタッフと同じ仕事を自動でこなします。注文、器の残ったサイドテーブル、汚れた卓、3人待っている卓をタップすると、その仕事を優先します。スタミナはありません</div><div class="stw">${statHTML(S.boss,1)}</div></div><div class="btns"><button class="alt tr" type="button">研修</button><button class="alt nmb" type="button">名前</button></div>`;
@@ -1279,7 +1344,7 @@ function addSec(L,t){const d=document.createElement('div');d.className='sec';d.t
 function addRow(L,u){if(u.h){addSec(L,u.h);return;}{const d=document.createElement('div');d.className='row'+(u.alt?' two':'');
     d.innerHTML=`<div><div class="nm">${u.name}<small></small></div><div class="ds"></div></div><button class="buy" type="button"></button>`;
     if(u.alt){const ab=document.createElement('button');ab.type='button';ab.onclick=()=>{u.alt.click();refresh();};d.insertBefore(ab,d.querySelector('.buy'));u._alt=ab;}
-    const btn=d.querySelector('.buy');btn.onclick=()=>{if(u.max()||u.lock())return;if(u.pickFirst){interview(u.pickFirst);return;}if(u.iap){playPurchase(u.name,u.iap(),()=>{u.buy();save();refresh();});return;}const c=pr(u.cost());if(S.money<c)return;S.money-=c;u.buy();save();if(u.rerender)renderTab();else refresh();};
+    const btn=d.querySelector('.buy');btn.onclick=()=>{if(u.max()||u.lock())return;if(u.pickFirst){interview(u.pickFirst);return;}if(u.iap){playPurchase(u.name,u.iap(),()=>{u.buy();save();refresh();toast(`${u.name}をレベルアップしました`);});return;}const c=pr(u.cost());if(S.money<c)return;S.money-=c;u.buy();save();if(u.rerender)renderTab();else refresh();};
     L.appendChild(d);rows.push({u,lv:d.querySelector('small'),ds:d.querySelector('.ds'),btn});}}
 function dots(m,k){let h='';for(let i=0;i<5;i++)h+=i<m[k]?'●':i<capOf(m,k)?'○':'<span class="lk">○</span>';return h;}
 function statHTML(m,xp){return `<div class="stats">${STATS.map(([k,l])=>`<span>${l}<i>${dots(m,k)}</i>${xp&&m[k]<capOf(m,k)?`<span class="xp"><b style="width:${Math.round(100*((m.xp&&m.xp[k])||0)/xpNeed(m[k]))}%"></b></span>`:''}</span>`).join('')}</div>`;}
@@ -1302,7 +1367,7 @@ function interview(role){
   mcard.innerHTML=`<h2>${role==='hall'?'ホールスタッフ':'メンバー'}の面接</h2><p>採用費は候補ごとに違います。今のステータスと伸びしろが大きいほど高くなります。白丸までが伸びしろで、薄い丸は上限の外です。</p>
     ${cs.map((c,i)=>{const p=hireCost(c,role);return `<button class="cand" type="button" data-i="${i}" ${S.money<p?'disabled':''}><b>${c.name}</b><span class="tc">¥${fmt(p)}</span>${statHTML(c)}</button>`;}).join('')}
     <p style="margin:10px 0 0">所持金 ¥${fmt(S.money)}</p>
-    <button class="mbtn pri" id="ivAd">広告を見て候補を入れ替える</button><button class="mbtn sec" id="ivX">閉じる</button>`;
+    <button class="mbtn pri" id="ivAd">${adPre()}候補を入れ替える</button><button class="mbtn sec" id="ivX">閉じる</button>`;
   modal.classList.add('show');
   mcard.querySelectorAll('.cand').forEach(b=>b.onclick=()=>{const c=cs[+b.dataset.i],cost=hireCost(c,role);if(S.money<cost){toast('お金が足りません');return;}
     S.money-=cost;S.cands[role]=null;
@@ -1353,7 +1418,7 @@ function refresh(){
   if(playTime>60){S.rate=pm/60;S.bestRate=Math.max(S.bestRate||0,S.rate);}
   const rb=document.getElementById('rushBtn');
   if(proOn()){const r=Math.ceil((S.proUntil-now)/1000);rb.textContent=`プロ来店中 ${Math.floor(r/60)}:${String(r%60).padStart(2,'0')}`;rb.title='麻雀プロが来店中';rb.classList.add('on');}
-  else{rb.textContent='▶ プロを呼ぶ';rb.title='広告を見て麻雀プロを呼ぶ(2分間 客足2倍)';rb.classList.remove('on');}
+  else{rb.textContent='▶ プロを呼ぶ';rb.title=adPre()+'麻雀プロを呼ぶ(2分間 客足2倍)';rb.classList.remove('on');}
 }
 const sheetEl=document.getElementById('sheet'),sheetBtn=document.getElementById('sheetToggle');
 function setSheet(open){sheetEl.classList.toggle('collapsed',!open);sheetBtn.setAttribute('aria-expanded',open);}
@@ -1385,20 +1450,67 @@ document.getElementById('rushBtn').onclick=()=>{if(proOn())return;playAd(()=>{S.
 
 let toastTimer;function toast(m){const t=document.getElementById('toast');t.textContent=m;t.style.opacity=1;clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.style.opacity=0,1800);}
 const modal=document.getElementById('modal'),mcard=document.getElementById('mcard');
-function playAd(cb){let n=3;modal.classList.add('show');
+function playAd(cb){if(noAds()){cb();return;}let n=3;modal.classList.add('show');
   const dr=()=>{mcard.innerHTML=`<h2>広告を再生しています</h2><p>プロトタイプ用のダミー広告です。実装時はAdMobのリワード広告に置き換えます。</p><div class="count">${n}</div>`;};
   dr();const iv=setInterval(()=>{n--;if(n<=0){clearInterval(iv);modal.classList.remove('show');cb();}else dr();},1000);}
 function playPurchase(name,yen,cb){modal.classList.add('show');
   mcard.innerHTML=`<h2>${name}</h2><p>プロトタイプ用のダミー課金です。実装時はアプリ内課金に置き換えます。</p><div class="mv">${yen}円</div>
     <button class="mbtn pri" id="iapOk">購入する</button><button class="mbtn sec" id="iapX">やめる</button>`;
   document.getElementById('iapX').onclick=()=>modal.classList.remove('show');
-  document.getElementById('iapOk').onclick=()=>{modal.classList.remove('show');cb();toast(`${name}をレベルアップしました`);};}
+  document.getElementById('iapOk').onclick=()=>{modal.classList.remove('show');cb();};}
+// ---------- 課金ショップ ----------
+const iapEl=document.getElementById('iap'),iapBody=document.getElementById('iapBody'),spdBtn=document.getElementById('spdBtn');
+function thanks(msg){mcard.innerHTML=`<h2>お買い上げありがとうございます</h2><p>${msg}</p><button class="mbtn pri" id="tyOk">OK</button>`;
+  modal.classList.add('show');document.getElementById('tyOk').onclick=()=>modal.classList.remove('show');}
+function updSpd(){spdBtn.classList.toggle('show',!!S.iap.speed);const m=gameSpeed();spdBtn.textContent='▶▶ ×'+m;spdBtn.classList.toggle('fast',m>1);}
+spdBtn.onclick=()=>{const i=SPEEDS.indexOf(gameSpeed());S.iap.mul=SPEEDS[(i+1)%SPEEDS.length];save();updSpd();toast(`営業の速さを×${S.iap.mul}にしました`);};
+function swatch(cat,it){
+  if(cat==='uniform')return`<div class="sw" style="background:#6b4a30"><i style="width:22px;height:34px;border-radius:11px;background:${it.body};display:flex;justify-content:center"><i style="width:6px;height:34px;background:${it.vest}"></i></i><i style="width:6px;height:8px;background:${it.tie}"></i></div>`;
+  if(cat==='mat')return`<div class="sw" style="background:${it.c};box-shadow:inset 0 0 0 5px #8a5a34"></div>`;
+  const c=it.c||TIERS[0].back;return`<div class="sw" style="background:#2e7d4f">${`<i style="width:9px;height:13px;background:${c}"></i>`.repeat(5)}</div>`;}
+function renderShop(){
+  const row=(nm,sub,ds,btn,extra)=>`<div class="row"><div><div class="nm">${nm}${sub?`<small>${sub}</small>`:''}</div><div class="ds">${ds}</div>${extra||''}</div>${btn}</div>`;
+  const bb=k=>S.iap[k]?'<button class="buy" type="button" disabled>購入済み</button>':`<button class="buy" type="button" data-buy="${k}">${IAP[k].yen}円</button>`;
+  const lv=S.mgr||0,mMax=lv>=OFFCAP.length-1;
+  let h='';
+  if(!S.iap.starter)h+=`<div class="iap-pack"><span class="tag">1回かぎり</span><h3>スターターパック</h3><div class="ds">これからお店を広げる方へのお得なセットです</div>
+    <ul><li>開業資金 ¥${fmt(Math.round(STARTER_MONEY*CM()))}</li><li>いまの店の店長代行を1段階アップ${mMax?'(最大のため資金に上乗せ)':''}</li><li>スタッフの制服「ひだまり法被」</li></ul>
+    <button class="buy" type="button" data-buy="starter">${IAP.starter.yen}円</button></div>`;
+  h+='<div class="sec">便利な機能</div>';
+  h+=row(IAP.noAds.name,'','広告を見る代わりに、すぐに報酬を受け取れます(役満ボーナス、すぐ直す、候補の入れ替え、プロ来店、留守中の2倍)',bb('noAds'));
+  h+=row(IAP.speed.name,'','営業の進みを×1.5、×2に切り替えられます。店内の左上のボタンでも切り替えられます',bb('speed'),
+    S.iap.speed?`<div class="spd-seg">${SPEEDS.map(v=>`<button type="button" data-spd="${v}" aria-pressed="${gameSpeed()===v}">×${v}</button>`).join('')}</div>`:'');
+  h+=row(IAP.off.name,'',`留守中の売上が、営業中の${Math.round(OFF_EFF*100)}%から${Math.round(OFF_EFF_PLUS*100)}%に増えます(全店)`,bb('off'));
+  h+=row('店長代行',esc(shopName()),mMax?`留守中も最大${OFFCAP[lv]}時間分営業します`:`留守中に営業できる時間を${OFFCAP[lv]}時間から${OFFCAP[lv+1]}時間に延ばします`,
+    mMax?'<button class="buy" type="button" disabled>最大</button>':`<button class="buy" type="button" data-mgr="1">${MGR_IAP[lv]}円</button>`);
+  Object.keys(COS).forEach(cat=>{const C=COS[cat],wear=cosItem(cat).k;
+    h+=`<div class="sec">着せ替え:${C.name}</div><div class="cos-grid">${C.items.map(it=>{const own=hasCos(cat,it.k),on=wear===it.k;
+      const b=on?'<button class="buy" type="button" disabled>使用中</button>':own?`<button class="buy eq" type="button" data-wear="${cat}:${it.k}">使う</button>`:`<button class="buy" type="button" data-cos="${cat}:${it.k}">${it.yen}円</button>`;
+      return`<div class="cos${on?' on':''}">${swatch(cat,it)}<b>${it.n}</b>${b}</div>`;}).join('')}</div>`;});
+  h+='<div class="note">着せ替えは見た目だけが変わります。購入した内容は全店共通で、データをリセットしても残ります。</div>';
+  iapBody.innerHTML=h;}
+iapBody.onclick=e=>{const b=e.target.closest('button');if(!b||b.disabled)return;const d=b.dataset;
+  const after=msg=>{save();renderShop();updSpd();renderTab();thanks(msg);};
+  if(d.buy){const k=d.buy;playPurchase(IAP[k].name,IAP[k].yen,()=>{S.iap[k]=1;
+    if(k==='starter'){let money=Math.round(STARTER_MONEY*CM());if((S.mgr||0)<OFFCAP.length-1)S.mgr=(S.mgr||0)+1;else money*=2;S.money+=money;S.iap.own['uniform:happi']=1;S.iap.wear.uniform='happi';
+      after(`資金 ¥${fmt(money)}と、スタッフの制服「ひだまり法被」を受け取りました`);}
+    else if(k==='speed'){S.iap.mul=2;after('営業が×2で進みます。店内の左上のボタンで速さを切り替えられます');}
+    else if(k==='noAds')after('これからは広告を見ずに、すぐ報酬を受け取れます');
+    else after(`留守中の売上が${Math.round(OFF_EFF_PLUS*100)}%になりました`);});}
+  else if(d.mgr){const lv=S.mgr||0;if(lv>=OFFCAP.length-1)return;playPurchase('店長代行',MGR_IAP[lv],()=>{S.mgr=lv+1;after(`留守中に${OFFCAP[S.mgr]}時間分まで営業できるようになりました`);});}
+  else if(d.spd){S.iap.mul=+d.spd;save();renderShop();updSpd();}
+  else if(d.wear){const[cat,k]=d.wear.split(':');S.iap.wear[cat]=k;save();renderShop();}
+  else if(d.cos){const[cat,k]=d.cos.split(':'),it=COS[cat].items.find(i=>i.k===k);
+    playPurchase(`${COS[cat].name}「${it.n}」`,it.yen,()=>{S.iap.own[cat+':'+k]=1;S.iap.wear[cat]=k;after(`「${it.n}」を使っています。ショップでいつでも切り替えられます`);});}};
+document.getElementById('shopOpen').onclick=()=>{renderShop();iapBody.scrollTop=0;iapEl.classList.add('show');};
+document.getElementById('iapClose').onclick=()=>iapEl.classList.remove('show');
+updSpd();
 function offline(since){
   const el=Math.min((Date.now()-since)/1000,OFFCAP[S.mgr||0]*3600);if(el<60||(S.rate<=0&&bgIncome()<=0))return;
-  const amt=Math.round(S.rate*el*OFF_EFF+bgIncome()*el);if(amt<1)return;
+  const amt=Math.round(S.rate*el*offEff()+bgIncome()*el);if(amt<1)return;
   const m=Math.floor(el/60),h=Math.floor(m/60);
   mcard.innerHTML=`<h2>留守の間の売上</h2><p>${h?h+'時間':''}${m%60}分、スタッフがお店を回していました。</p><div class="mv">¥${fmt(amt)}</div>
-    <button class="mbtn pri" id="ofAd">広告を見て2倍受け取る</button><button class="mbtn sec" id="ofOk">受け取る</button>`;
+    <button class="mbtn pri" id="ofAd">${adPre()}2倍受け取る</button><button class="mbtn sec" id="ofOk">受け取る</button>`;
   modal.classList.add('show');
   document.getElementById('ofOk').onclick=()=>{modal.classList.remove('show');earn(amt,AISLE,HI/2);save();};
   document.getElementById('ofAd').onclick=()=>{modal.classList.remove('show');playAd(()=>{earn(amt*2,AISLE,HI/2);save();});};
@@ -1635,7 +1747,7 @@ function tutUpdate(){
 
 // ---------- loop ----------
 let last=performance.now(),acc=0;
-function loop(t){const dt=Math.max(0,Math.min((t-last)/1000,.1));last=t;if(S.started&&S.opened&&!storyOpen())update(dt);else{gt+=dt;updateOutside(dt);}tables.forEach(tb=>{if(tb.tap>0)tb.tap-=dt*3;});
+function loop(t){const dt=Math.max(0,Math.min((t-last)/1000,.1));last=t;if(S.started&&S.opened&&!storyOpen()){let g=dt*gameSpeed();while(g>1e-6){const s=Math.min(g,.1);update(s);g-=s;}}else{gt+=dt;updateOutside(dt);}tables.forEach(tb=>{if(tb.tap>0)tb.tap-=dt*3;});
   if(S.started)draw();tutUpdate();document.getElementById('money').textContent='¥'+fmt(S.money);drawTimebar();
   acc+=dt;if(acc>.25){acc=0;refresh();}requestAnimationFrame(loop);}
 {const iv=document.getElementById('intro');for(let i=0;i<14;i++){const p=document.createElement('i');p.className='petal';
