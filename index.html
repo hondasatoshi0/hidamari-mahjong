@@ -1536,7 +1536,9 @@ function makeFace(k){const c=document.createElement('canvas');c.width=c.height=1
 let storyQ=[],storyCur=null;
 const storyOpen=()=>!!storyCur;
 function fillText(t){return t.replace(/\{boss\}/g,bossLabel()).replace(/\{shop\}/g,shopName());}
-function playScene(id,onDone,force){S.story=S.story||{};if(!STORY[id]||(S.story[id]&&!force)){onDone&&onDone();return;}
+// チュートリアル中はヒントの会話を出さない(既読にしないので、終わったあと同じ状況になれば出る)
+const TUT_HOLD=['drink_hint','first_yakuman','first_break','first_rest'];
+function playScene(id,onDone,force){S.story=S.story||{};if(!STORY[id]||(S.story[id]&&!force)||(S.tut>0&&TUT_HOLD.includes(id))){onDone&&onDone();return;}
   S.story[id]=1;save();storyQ.push({id,i:0,onDone});if(!storyCur)nextScene();}
 function nextScene(){storyCur=storyQ.shift()||null;setPre();document.body.classList.toggle('story',!!storyCur);const box=document.getElementById('story');if(!storyCur){box.classList.remove('show');return;}box.classList.add('show');showLine();}
 function showLine(){const [k,t]=STORY[storyCur.id][storyCur.i],face=document.getElementById('stFace');
