@@ -407,9 +407,9 @@ const COS={
   mat:{name:'卓のマット',items:[
     {k:'std',n:'定番の緑',c:'#2e7d4f'},{k:'navy',n:'深い紺',c:'#233f7a',yen:120},
     {k:'wine',n:'ワインレッド',c:'#7a2334',yen:120},{k:'violet',n:'紫紺',c:'#4a2f78',yen:120}]},
-  tile:{name:'牌の背',items:[
+  tile:{name:'牌の色',items:[
     {k:'std',n:'定番',c:null},{k:'sakura',n:'桜色',c:'#f19bb5',yen:120},
-    {k:'black',n:'漆黒',c:'#2a2c33',yen:120},{k:'gold',n:'黄金',c:'#d9aa3a',yen:250}]}
+    {k:'black',n:'漆黒',c:'#2a2c33',yen:120},{k:'gold',n:'黄金',c:'#ffe45c',yen:250}]}
 };
 const cosItem=cat=>COS[cat].items.find(i=>i.k===((S.iap.wear||{})[cat]||'std'))||COS[cat].items[0];
 const hasCos=(cat,k)=>k==='std'||!!(S.iap.own||{})[cat+':'+k];
