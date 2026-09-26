@@ -235,6 +235,8 @@ body.pre #toast{z-index:8}
 @keyframes petal{to{transform:translate(-60px,110vh) rotate(540deg)}}
 @media (prefers-reduced-motion: reduce){.in-letter,.petal{animation:none}.petal{display:none}}
 /* チュートリアル:操作する場所を光る枠で示す(枠はタップを通す) */
+/* 枠の外のタップを受け止める透明な板(枠の上下左右に4枚) */
+.coachBlk{position:fixed;z-index:8;display:none;background:transparent;touch-action:none}
 #coachRing{position:fixed;z-index:8;display:none;border:3px solid #ffd35a;border-radius:12px;pointer-events:none;
   box-shadow:0 0 0 9999px rgba(0,0,0,.35),0 0 16px 2px rgba(255,211,90,.9);animation:coachPulse 1.2s ease-in-out infinite}
 @keyframes coachPulse{50%{border-color:#fff}}
@@ -325,7 +327,7 @@ body.tut .hd-btns{visibility:hidden} /* チュートリアル中は右上をス�
   </div>
 </div>
 <div id="modal"><div class="mcard" id="mcard"></div></div>
-<div id="coachRing"></div><div id="coachTip" role="dialog" aria-live="polite"></div><button type="button" id="coachSkip">チュートリアルをスキップ</button>
+<div class="coachBlk"></div><div class="coachBlk"></div><div class="coachBlk"></div><div class="coachBlk"></div><div id="coachRing"></div><div id="coachTip" role="dialog" aria-live="polite"></div><button type="button" id="coachSkip">チュートリアルをスキップ</button>
 <div id="map" role="dialog" aria-label="全国マップ">
   <div class="map-head"><div><div class="map-title">全国マップ</div><div class="map-sub" id="mapSub"></div></div><button type="button" id="mapClose">閉じる</button></div>
   <div class="map-body"><svg id="mapSvg" viewBox="22 2 342 364" preserveAspectRatio="xMidYMid meet"></svg></div>
@@ -347,6 +349,7 @@ const TIERS=[
 const upCost=(i,t)=>Math.round((t===0?3000:40000)*Math.pow(1.35,i));
 // 留守中の営業:店長代行のレベルで上限時間が延びる。効率は25%(広告で2倍)
 const OFFCAP=[2,4,8,12],OFF_EFF=0.25;
+const MGR_IAP=[160,480,980]; // 店長代行のレベルアップは課金のみ(円、レベルごと)
 const YAKU=['国士無双','四暗刻','大三元','字一色','緑一色','小四喜','清老頭','九蓮宝燈'];
 const SLOTS=[];
 const ROW_GAP=134; // 卓の縦の間隔
@@ -1205,7 +1208,7 @@ const ROW={
     desc:()=>S.drink?`1杯 ¥${fmt(drinkPrice())}。半荘中に注文が入ります`:'半荘中にドリンクの注文が入るようになります',buy(){S.drink++;}},
   food:{name:'フード',lv:()=>S.food?'Lv'+S.food:'',cost:()=>S.food?Math.round(1140*Math.pow(1.293,S.food-1)):1500,max:()=>false,lock:no,
     desc:()=>S.food?`1品 ¥${fmt(foodPrice())}。厨房で作って運びます`:'厨房を開けて、フードの注文を受けます',buy(){if(!S.food)toast('厨房を開けました');S.food++;}},
-  mgr:{name:'店長代行',lv:()=>`${OFFCAP[S.mgr||0]}時間`,cost:()=>Math.round(4000*Math.pow(8,S.mgr||0)),max:()=>(S.mgr||0)>=OFFCAP.length-1,lock:no,
+  mgr:{name:'店長代行',lv:()=>`${OFFCAP[S.mgr||0]}時間`,cost:()=>0,iap:()=>MGR_IAP[S.mgr||0],max:()=>(S.mgr||0)>=OFFCAP.length-1,lock:no,
     desc:()=>(S.mgr||0)>=OFFCAP.length-1?`留守中も最大${OFFCAP[OFFCAP.length-1]}時間分営業します`:`留守中に営業できる時間を${OFFCAP[S.mgr||0]}時間から${OFFCAP[(S.mgr||0)+1]}時間に延ばします`,buy(){S.mgr=(S.mgr||0)+1;}},
   broom:{name:'掃除用具',lv:()=>S.broom?'導入済み':'',cost:()=>400,max:()=>!!S.broom,lock:no,
     desc:()=>'立ち番のメンバーが卓を半分の時間で掃除します',buy(){S.broom=1;}},
@@ -1271,7 +1274,7 @@ function renderTab(){
 function addRow(L,u){{const d=document.createElement('div');d.className='row'+(u.alt?' two':'');
     d.innerHTML=`<div><div class="nm">${u.name}<small></small></div><div class="ds"></div></div><button class="buy" type="button"></button>`;
     if(u.alt){const ab=document.createElement('button');ab.type='button';ab.onclick=()=>{u.alt.click();refresh();};d.insertBefore(ab,d.querySelector('.buy'));u._alt=ab;}
-    const btn=d.querySelector('.buy');btn.onclick=()=>{if(u.max()||u.lock())return;if(u.pickFirst){interview(u.pickFirst);return;}const c=pr(u.cost());if(S.money<c)return;S.money-=c;u.buy();save();if(u.rerender)renderTab();else refresh();};
+    const btn=d.querySelector('.buy');btn.onclick=()=>{if(u.max()||u.lock())return;if(u.pickFirst){interview(u.pickFirst);return;}if(u.iap){playPurchase(u.name,u.iap(),()=>{u.buy();save();refresh();});return;}const c=pr(u.cost());if(S.money<c)return;S.money-=c;u.buy();save();if(u.rerender)renderTab();else refresh();};
     L.appendChild(d);rows.push({u,lv:d.querySelector('small'),ds:d.querySelector('.ds'),btn});}}
 function dots(m,k){let h='';for(let i=0;i<5;i++)h+=i<m[k]?'●':i<capOf(m,k)?'○':'<span class="lk">○</span>';return h;}
 function statHTML(m,xp){return `<div class="stats">${STATS.map(([k,l])=>`<span>${l}<i>${dots(m,k)}</i>${xp&&m[k]<capOf(m,k)?`<span class="xp"><b style="width:${Math.round(100*((m.xp&&m.xp[k])||0)/xpNeed(m[k]))}%"></b></span>`:''}</span>`).join('')}</div>`;}
@@ -1332,6 +1335,7 @@ function refresh(){
     r.lv.textContent=r.u.lv();const lk=r.u.lock();r.ds.textContent=lk||r.u.desc();
     if(r.u.max()){r.btn.textContent='済み';r.btn.disabled=true;}else if(lk){r.btn.textContent='未解放';r.btn.disabled=true;}
     else if(r.u.pickFirst){r.btn.textContent='面接する';r.btn.disabled=false;}
+    else if(r.u.iap){r.btn.textContent='課金 '+r.u.iap()+'円';r.btn.disabled=false;}
     else{const c=pr(r.u.cost());r.btn.textContent='¥'+fmt(c);r.btn.disabled=S.money<c;}});
   if(tab==='shop'){const q=id=>document.getElementById(id);if(q('st-total')){q('st-total').textContent='¥'+fmt(S.total);q('st-day').textContent=S.day+'日目';q('st-clean').textContent=fmt(S.cleans)+'回';q('st-rep').textContent=fmt(S.repairs)+'回';q('st-games').textContent=fmt(S.games);
     q('st-yaku').textContent=fmt(S.yaku)+'回';q('st-served').textContent=fmt(S.served)+'品';q('st-lost').textContent=fmt(S.lost)+'人';q('st-pace').textContent='+'+Math.round(decoBonus()*100)+'%';}}
@@ -1379,6 +1383,11 @@ const modal=document.getElementById('modal'),mcard=document.getElementById('mcar
 function playAd(cb){let n=3;modal.classList.add('show');
   const dr=()=>{mcard.innerHTML=`<h2>広告を再生しています</h2><p>プロトタイプ用のダミー広告です。実装時はAdMobのリワード広告に置き換えます。</p><div class="count">${n}</div>`;};
   dr();const iv=setInterval(()=>{n--;if(n<=0){clearInterval(iv);modal.classList.remove('show');cb();}else dr();},1000);}
+function playPurchase(name,yen,cb){modal.classList.add('show');
+  mcard.innerHTML=`<h2>${name}</h2><p>プロトタイプ用のダミー課金です。実装時はアプリ内課金に置き換えます。</p><div class="mv">${yen}円</div>
+    <button class="mbtn pri" id="iapOk">購入する</button><button class="mbtn sec" id="iapX">やめる</button>`;
+  document.getElementById('iapX').onclick=()=>modal.classList.remove('show');
+  document.getElementById('iapOk').onclick=()=>{modal.classList.remove('show');cb();toast(`${name}をレベルアップしました`);};}
 function offline(since){
   const el=Math.min((Date.now()-since)/1000,OFFCAP[S.mgr||0]*3600);if(el<60||(S.rate<=0&&bgIncome()<=0))return;
   const amt=Math.round(S.rate*el*OFF_EFF+bgIncome()*el);if(amt<1)return;
@@ -1559,6 +1568,12 @@ document.getElementById('stSkip').onclick=skipStory;
 let tutTap=0,tutBase=null;
 const coachRing=document.getElementById('coachRing'),coachTip=document.getElementById('coachTip'),coachSkip=document.getElementById('coachSkip');
 coachSkip.onclick=()=>{S.tut=-1;save();};
+const coachBlk=[...document.querySelectorAll('.coachBlk')];
+// 指定の操作以外をできないように、枠(r)の外をすべて覆う。rがなければ画面全体を覆う
+function setBlock(r){const W_=window.innerWidth,H_=window.innerHeight;
+  const bx=r?[[0,0,W_,r.top],[0,r.top+r.height,W_,H_-r.top-r.height],[0,r.top,r.left,r.height],[r.left+r.width,r.top,W_-r.left-r.width,r.height]]:[[0,0,W_,H_]];
+  coachBlk.forEach((b,i)=>{const v=bx[i];if(!v||v[2]<=0||v[3]<=0){b.style.display='none';return;}
+    Object.assign(b.style,{display:'block',left:v[0]+'px',top:v[1]+'px',width:v[2]+'px',height:v[3]+'px'});});}
 // 置いてある卓すべてを囲む枠(椅子・サイドテーブル・卓の札まで入れる)
 function tablesRect(){if(!tables.length)return null;const xs=tables.map(t=>SLOTS[t.slot].x),ys=tables.map(t=>SLOTS[t.slot].y),m=64,r=cv.getBoundingClientRect();
   const x0=Math.min(...xs)-m,x1=Math.max(...xs)+m,y0=Math.min(...ys)-m-6,y1=Math.max(...ys)+m;
@@ -1569,7 +1584,7 @@ function tabEl(t,key){const nb=document.querySelector(`nav button[data-tab="${t}
   const r=rows.find(r=>r.u&&(r.u===key||r.u.key===key));if(!r)return nb;if(!r.btn._sv){r.btn._sv=1;r.btn.scrollIntoView({block:'nearest'});}return r.btn;}
 const TUT=[
   {t:'卓に4人そろうと半荘が始まります。お客さんが3人のときは、メンバーが4人目に入ります。まずは様子を見てみましょう。',
-    rect:tablesRect,tipTop:1,done:()=>tables.some(t=>t.state==='play')||S.games>0},
+    rect:tablesRect,tipTop:1,watch:1,done:()=>tables.some(t=>t.state==='play')||S.games>0},
   {t:'チュートリアル中は時間が止まっています。対局中の卓をタップすると、半荘が少し早く進みます。3回タップしてみましょう。',
     rect:()=>{const tb=tables.find(t=>t.state==='play');return tb&&canvasRect(SLOTS[tb.slot].x,SLOTS[tb.slot].y,46);},done:()=>tutTap>=3},
   {t:'「卓」タブの「場代」を上げると、半荘ごとの収入が増えます。1回上げてみましょう。',
@@ -1586,7 +1601,7 @@ function tutUpdate(){
   if(S.tut===0&&S.stage===0&&S.opened&&(S.story||{}).ch0_open&&!storyOpen()){S.tut=1;save();}
   const on=S.tut>0&&S.opened&&!storyOpen()&&S.closing!==2&&!modal.classList.contains('show')&&!document.getElementById('map').classList.contains('show');
   document.body.classList.toggle('tut',on);
-  if(!on){coachRing.style.display=coachTip.style.display=coachSkip.style.display='none';return;}
+  if(!on){coachRing.style.display=coachTip.style.display=coachSkip.style.display='none';coachBlk.forEach(b=>b.style.display='none');return;}
   coachSkip.style.display='block';
   const st=TUT[S.tut-1];if(!st){S.tut=-1;save();return;}
   if(!tutBase)tutBase={fee:S.fee,plant:S.deco.plant};
@@ -1597,6 +1612,7 @@ function tutUpdate(){
   let r=null;if(st.rect)r=st.rect();else if(st.el){const e=st.el();if(e&&e.offsetParent)r=e.getBoundingClientRect();}
   coachTip.style.display='block';const vh=window.innerHeight;
   // tipTopのステップは吹き出しを画面上部に固定する(枠がタブから購入ボタンへ移っても動かさない)
+  setBlock(st.next||st.watch||!r?null:r); // 見るだけのステップは画面全体を覆う
   if(r){const p=4;Object.assign(coachRing.style,{display:'block',left:r.left-p+'px',top:r.top-p+'px',width:r.width+p*2+'px',height:r.height+p*2+'px'});
     if(st.tipTop){coachTip.style.bottom='';coachTip.style.top='calc(60px + env(safe-area-inset-top,0px))';}
     else if(r.top+r.height/2>vh*.5){coachTip.style.top='';coachTip.style.bottom=Math.min(vh-120,vh-r.top+14)+'px';}
