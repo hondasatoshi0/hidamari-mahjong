@@ -162,7 +162,9 @@ nav button svg{display:block}
 #stName{font-family:"DotGothic16",sans-serif;font-size:13px;color:#ffd35a;margin-bottom:4px}
 #stText{font-family:"DotGothic16","Zen Kaku Gothic New",sans-serif;font-size:15px;line-height:1.6}
 #stText.narr{font-style:normal;color:#dfe3ea}
-#stSkip{position:absolute;top:-14px;right:8px;border:1.5px solid #c8a04a;background:#23272f;color:#f4f1e8;border-radius:999px;font:inherit;font-size:12px;padding:4px 12px;min-height:30px;cursor:pointer}
+#stSkip{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:12px;min-height:40px;padding:0 16px;border-radius:999px;
+  border:1.5px solid rgba(255,255,255,.8);background:rgba(20,20,30,.6);color:#fff;font:inherit;font-weight:700;font-size:13px;cursor:pointer}
+body.story .hd-btns{visibility:hidden} /* 会話中は右上をスキップボタンに譲る */
 #stNext{position:absolute;right:12px;bottom:4px;font-size:12px;color:#ffd35a;animation:stBlink 1s infinite}
 @keyframes stBlink{50%{opacity:.2}}
 .row.two{grid-template-columns:1fr auto auto}
@@ -1536,7 +1538,7 @@ const storyOpen=()=>!!storyCur;
 function fillText(t){return t.replace(/\{boss\}/g,bossLabel()).replace(/\{shop\}/g,shopName());}
 function playScene(id,onDone,force){S.story=S.story||{};if(!STORY[id]||(S.story[id]&&!force)){onDone&&onDone();return;}
   S.story[id]=1;save();storyQ.push({id,i:0,onDone});if(!storyCur)nextScene();}
-function nextScene(){storyCur=storyQ.shift()||null;setPre();const box=document.getElementById('story');if(!storyCur){box.classList.remove('show');return;}box.classList.add('show');showLine();}
+function nextScene(){storyCur=storyQ.shift()||null;setPre();document.body.classList.toggle('story',!!storyCur);const box=document.getElementById('story');if(!storyCur){box.classList.remove('show');return;}box.classList.add('show');showLine();}
 function showLine(){const [k,t]=STORY[storyCur.id][storyCur.i],face=document.getElementById('stFace');
   if(k==='narr'){face.style.display='none';}else{face.style.display='';FACES[k]=FACES[k]||makeFace(k);face.src=FACES[k];}
   document.getElementById('stName').textContent=SPK[k]();document.getElementById('stName').style.display=k==='narr'?'none':'';
