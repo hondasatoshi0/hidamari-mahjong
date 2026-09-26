@@ -801,19 +801,22 @@ document.getElementById('nextDay').onclick=nextDay;
 // ---------- update ----------
 function update(dt){
   gt+=dt;playTime+=dt;updateOutside(dt);
+  // チュートリアル中は時間を止める:時計・半荘は進まず(卓はタップした分だけ進む)、お金も操作しないと増えない
+  const tutOn=S.tut>0;if(tutOn)S.boostUntil=Date.now()+90000; // 開店記念の客足2倍はチュートリアル後から数える
   if(S.stage===0&&!S.drink&&S.money>=pr(250))playScene('drink_hint');
   if(S.stage===1&&S.storeEarn>=ST().goal.earn*.25)playScene('pro_meet');
-  const bg=bgIncome();if(bg>0){chainAcc+=bg*dt;if(chainAcc>=1){const v=Math.floor(chainAcc);chainAcc-=v;S.money+=v;S.total+=v;}}
+  const bg=tutOn?0:bgIncome();if(bg>0){chainAcc+=bg*dt;if(chainAcc>=1){const v=Math.floor(chainAcc);chainAcc-=v;S.money+=v;S.total+=v;}}
   checkGoal();
   if(S.closing===2){if(dayCardT>0){dayCardT-=dt;document.getElementById('dayCount').textContent=Math.ceil(Math.max(0,dayCardT))+'秒後に自動で次の日へ進みます';if(dayCardT<=0)nextDay();}}
-  else if(!S.closing){S.clock+=dt*MINPS;if(S.clock>=1440){S.clock=1440;S.closing=1;closeT=0;toast('閉店時間です。いまの半荘で終わりにします');}}
+  else if(!S.closing){if(!tutOn)S.clock+=dt*MINPS;if(S.clock>=1440){S.clock=1440;S.closing=1;closeT=0;toast('閉店時間です。いまの半荘で終わりにします');}}
   else closing(dt);
   // 待合室から卓へ
   ents.filter(e=>e.state==='waiting').sort((a,b)=>a.waitOrder-b.waitOrder).forEach(e=>{
     const tb=openTable(e);if(tb)sendToSeat(e,tb,freeIdx(tb));
-    else if(gt-e.sitSince>patience()+custPat(e)-40){addRep(-.05);leave(e,'…');}});
+    else if(!tutOn&&gt-e.sitSince>patience()+custPat(e)-40){addRep(-.05);leave(e,'…');}});
   if(S.tut===1&&spawnT>1)spawnT=1; // チュートリアルの最初は、半荘が早く始まるようにお客さんを早めに呼ぶ
-  if(!S.closing){spawnT-=dt;if(spawnT<=0){spawn();spawnT=interval()*(0.7+Math.random()*0.6);}}
+  const tutHold=tutOn&&(S.tut>1||tables.some(t=>t.state==='play')); // 最初の半荘が始まったら、チュートリアル中は新しい客を呼ばない
+  if(!S.closing&&!tutHold){spawnT-=dt;if(spawnT<=0){spawn();spawnT=interval()*(0.7+Math.random()*0.6);}}
   ents.forEach(e=>{move(e,dt);if(e.bubbleT>0)e.bubbleT-=dt;});
   // プロ
   const pro=ents.find(e=>e.type==='pro');
@@ -824,26 +827,26 @@ function update(dt){
   tables.forEach(tb=>{
     const T=TIERS[tierOf(tb)];
     if(tb.broken){if(Math.random()<dt*3)parts.push({x:SLOTS[tb.slot].x+rnd(-10,10),y:SLOTS[tb.slot].y,vx:rnd(-6,6),vy:-18,life:1.2,max:1.4,c:'rgba(160,160,160,.6)',s:4});return;}
-    if(tb.state==='play'){tb.t+=dt;
+    if(tb.state==='play'){if(!tutOn)tb.t+=dt;
       if(tb.t>=(tb.dur||T.dur))endGame(tb);return;}
     const oc=tb.seats.map(byId).filter(Boolean);
     const custs=oc.filter(e=>e.type==='cust');
     if(oc.length===4&&oc.every(e=>e.state==='seated')){startGame(tb);return;}
     if(!custs.length){oc.forEach(e=>{if(isCrew(e)&&e.state!=='returning')goHome(e);});return;}
     if(S.modes[tb.slot]==='set')return;
-    custs.forEach(e=>{if(e.state==='seated'&&gt-e.sitSince>custPat(e)){addRep(-.05);leave(e,'…');}});
+    custs.forEach(e=>{if(!tutOn&&e.state==='seated'&&gt-e.sitSince>custPat(e)){addRep(-.05);leave(e,'…');}});
     // メンバーは、お客さん(プロを含む)が3人席に着いてから4人目として入る
     if(oc.length<4&&oc.filter(e=>!isCrew(e)&&e.state==='seated').length>=3&&!oc.some(isCrew)){
       const st=ents.find(e=>e.type==='staff'&&e.state==='idle'&&!e.st.quitting)||ents.find(e=>e.type==='boss'&&e.state==='idle');
       if(st){const k=freeIdx(tb);if(k>=0){sendToSeat(st,tb,k);tb.waitSince=gt-2;}}
     }
   });
-  // 休憩:休憩室で体力を回復し、満タンになったら持ち場に戻る(約20秒)
+  // 休憩:休憩室で体力を回復し、満タンになったら持ち場に戻る(約20秒)。待機中も休憩室の1/5の速さで少しずつ回復する
   ents.forEach(e=>{if(!e.st)return;if(e.st.stam==null)e.st.stam=stamMax(e.st);
     if(e.state==='resting'){e.st.stam=Math.min(stamMax(e.st),e.st.stam+stamMax(e.st)/20*dt);
       if(e.st.stam>=stamMax(e.st)){e.restSpot=null;gainXp(e,'sta',3);
         if(e.type==='hall'){e.state='returning';route(e,HALLHOME.x,HALLHOME.y,HOMEY);}else{e.state='returning';const h=home(e.idx);route(e,h.x,h.y,HOMEY);}}}
-    else if(e.state==='idle'&&tired(e))goRest(e);});
+    else if(e.state==='idle'){if(tired(e))goRest(e);else e.st.stam=Math.min(stamMax(e.st),e.st.stam+stamMax(e.st)/100*dt);}});
   // 退職予約の実行
   ents.filter(e=>e.st&&e.st.quitting).forEach(e=>{
     if(e.state==='idle'){const role=e.type==='hall'?'hall':'member';doDismiss({m:e.st,role});}else releaseIfWaiting(e);});
@@ -1565,14 +1568,14 @@ function canvasRect(x,y,half){const r=cv.getBoundingClientRect(),h=Math.max(half
 function tabEl(t,key){const nb=document.querySelector(`nav button[data-tab="${t}"]`);if(tab!==t||sheetEl.classList.contains('collapsed'))return nb;
   const r=rows.find(r=>r.u&&(r.u===key||r.u.key===key));if(!r)return nb;if(!r.btn._sv){r.btn._sv=1;r.btn.scrollIntoView({block:'nearest'});}return r.btn;}
 const TUT=[
-  {t:'お客さんが3人そろうと、メンバーが4人目に入って半荘が始まります。まずは様子を見てみましょう。',
+  {t:'卓に4人そろうと半荘が始まります。お客さんが3人のときは、メンバーが4人目に入ります。まずは様子を見てみましょう。',
     rect:tablesRect,tipTop:1,done:()=>tables.some(t=>t.state==='play')||S.games>0},
-  {t:'対局中の卓をタップすると、半荘が少し早く進みます。3回タップしてみましょう。',
+  {t:'チュートリアル中は時間が止まっています。対局中の卓をタップすると、半荘が少し早く進みます。3回タップしてみましょう。',
     rect:()=>{const tb=tables.find(t=>t.state==='play');return tb&&canvasRect(SLOTS[tb.slot].x,SLOTS[tb.slot].y,46);},done:()=>tutTap>=3},
   {t:'「卓」タブの「場代」を上げると、半荘ごとの収入が増えます。1回上げてみましょう。',
-    el:()=>tabEl('table',ROW.fee),done:()=>S.fee>tutBase.fee},
+    el:()=>tabEl('table',ROW.fee),tipTop:1,done:()=>S.fee>tutBase.fee},
   {t:'「内装」タブで観葉植物を置くと、お客さんの来るペースが上がります。',
-    el:()=>tabEl('deco','deco:plant'),done:()=>S.deco.plant>tutBase.plant},
+    el:()=>tabEl('deco','deco:plant'),tipTop:1,done:()=>S.deco.plant>tutBase.plant},
   {t:'黄色い輪の人があなた(店長)です。注文の出ているお客さんや汚れた卓をタップすると、店長がその仕事を優先します。',
     rect:()=>{const b=ents.find(e=>e.type==='boss');return b&&canvasRect(b.x,b.y,18);},next:1},
   {t:'画面上の目標(売上と評判)を達成すると、次の街に2号店を出せます。場代や内装を少しずつ上げて、お店を育てていきましょう!',
@@ -1593,6 +1596,7 @@ function tutUpdate(){
     const nx=coachTip.querySelector('.ct-next');if(nx)nx.onclick=tutNext;}
   let r=null;if(st.rect)r=st.rect();else if(st.el){const e=st.el();if(e&&e.offsetParent)r=e.getBoundingClientRect();}
   coachTip.style.display='block';const vh=window.innerHeight;
+  // tipTopのステップは吹き出しを画面上部に固定する(枠がタブから購入ボタンへ移っても動かさない)
   if(r){const p=4;Object.assign(coachRing.style,{display:'block',left:r.left-p+'px',top:r.top-p+'px',width:r.width+p*2+'px',height:r.height+p*2+'px'});
     if(st.tipTop){coachTip.style.bottom='';coachTip.style.top='calc(60px + env(safe-area-inset-top,0px))';}
     else if(r.top+r.height/2>vh*.5){coachTip.style.top='';coachTip.style.bottom=Math.min(vh-120,vh-r.top+14)+'px';}
