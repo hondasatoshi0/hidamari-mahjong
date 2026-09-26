@@ -768,7 +768,7 @@ function endGame(tb){
   tb.dirt=Math.min(1,tb.dirt+(S.modes[tb.slot]==='set'?.04:.08));
   if(Math.random()<TIERS[tierOf(tb)].yk)yakuman(tb);
   const list=tb.seats.map(byId).filter(Boolean);
-  const brk=!tb.manual&&S.tiers[tb.slot]>=1&&Math.random()<(S.tiers[tb.slot]===1?.04:.025)*(S.maint?.5:1);
+  const brk=!tb.manual&&S.tiers[tb.slot]>=1&&Math.random()<(S.tiers[tb.slot]===1?.015:.008)*(S.maint?.5:1);
   if(S.modes[tb.slot]==='set'){
     const done=S.clock>=tb.setUntil||S.closing||brk;
     if(done){const hrs=Math.max(1,(S.clock-tb.setStart)/60);earn(Math.round(setRate(tb)*hrs),s.x,s.y-8,'#ffe08a');list.forEach(e=>leaveOrWait(e));
