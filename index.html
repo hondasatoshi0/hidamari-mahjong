@@ -545,11 +545,14 @@ function clampS(d){d.iap=Object.assign({noAds:0,speed:0,mul:1,off:0,starter:0},d
   (d.shops||[]).forEach(sh=>(sh.members||[]).concat(sh.hallStaff?[sh.hallStaff]:[]).forEach(m=>{if(m.sta==null){m.sta=1+Math.floor(Math.random()*3);m.cap=m.cap||{};m.cap.sta=Math.min(5,m.sta+Math.floor(Math.random()*(6-m.sta)));}}));
   // 卓のフリー/セット切り替えは廃止。フリー店の卓はすべてフリー、セット専門店の卓はすべてセット
   d.kind=d.kind||'free';(d.shops||[]).forEach(sh=>{sh.kind=sh.kind||'free';});
-  const fm=x=>{if(x.modes)x.modes=x.modes.map(()=>x.kind==='set'?'set':'free');};fm(d);(d.shops||[]).forEach(fm);
+  const fm=x=>{if(x.modes)x.modes=x.modes.map(()=>x.kind==='set'?'set':'free');
+    // セット専門店:待合室なし、スタッフはホールスタッフだけ(前の版で出した店もそろえる)
+    if(x.kind==='set'){x.wait=0;if(!x.hall){x.hall=1;x.hallStaff=(x.members||[])[0]||null;}x.members=[];x.staff=0;}};
+  fm(d);(d.shops||[]).forEach(fm);if(d.kind==='set'&&!d.hallStaff)d.hallStaff=genStaffRaw(d);(d.shops||[]).forEach(sh=>{if(sh.kind==='set'&&!sh.hallStaff)sh.hallStaff=genStaffRaw(d);});
   migrateShops(d);return d;}
 const SHOP_KEYS=['kind','opened','shopName','mgr','stage','tiers','modes','tb','fee','drink','food','hall','hallStaff','members','staff','wait','tv','manga','mag','broom','maint','deco','rep','storeEarn','bestRate','rate','regs','visits','cands','cleared'];
-function freshShop(stage,d,kind){kind=kind||'free';return{kind,opened:0,shopName:'',stage,tiers:[0,0],modes:[kind,kind],tb:[],fee:0,drink:0,food:0,hall:0,hallStaff:null,members:[genStaffRaw(d)],staff:1,
-  mgr:0,wait:1,tv:0,manga:0,mag:0,broom:0,maint:0,deco:{plant:0,clock:0,speaker:0,light:0,purifier:0,art:0,neon:0},rep:3,storeEarn:0,bestRate:0,rate:0,regs:[0,0,0,0,0],visits:0,cands:{},cleared:0};}
+function freshShop(stage,d,kind){kind=kind||'free';return{kind,opened:0,shopName:'',stage,tiers:[0,0],modes:[kind,kind],tb:[],fee:0,drink:0,food:0,hall:kind==='set'?1:0,hallStaff:kind==='set'?genStaffRaw(d):null,members:kind==='set'?[]:[genStaffRaw(d)],staff:kind==='set'?0:1,
+  mgr:0,wait:kind==='set'?0:1,tv:0,manga:0,mag:0,broom:0,maint:0,deco:{plant:0,clock:0,speaker:0,light:0,purifier:0,art:0,neon:0},rep:3,storeEarn:0,bestRate:0,rate:0,regs:[0,0,0,0,0],visits:0,cands:{},cleared:0};}
 function snapShop(d){const o={};SHOP_KEYS.forEach(k=>o[k]=d[k]);return JSON.parse(JSON.stringify(o));}
 function migrateShops(d){if(d.shops)return;const cur=d.stage||0;d.shops=[];
   for(let i=0;i<cur;i++){const sh=freshShop(i,d);sh.bestRate=((d.stores||[])[i]||{}).rate||0;sh.cleared=1;d.shops.push(sh);}
@@ -564,6 +567,9 @@ let S;S=load();if(!S.cands)S.cands={};REG=REGS[S.stage||0];
 
 const tierOf=tb=>tb.manual?0:S.tiers[tb.slot];
 const feePer=tb=>Math.round(40*(1+0.1*S.fee)*TIERS[tierOf(tb)].mult*ST().fee);
+const barPrice=()=>Math.round(30*(1+0.14*(S.drink-1))*ST().fee); // ドリンクバー1人分
+// ドリンクバーの立ち位置(待合室の場所に置く)
+const BAR=[{x:26,y:66},{x:62,y:66},{x:98,y:66},{x:134,y:66}];
 const drinkPrice=()=>Math.round(50*(1+0.14*(S.drink-1))*ST().fee);
 const foodPrice=()=>Math.round(140*(1+0.14*(S.food-1))*ST().fee);
 const proOn=()=>Date.now()<S.proUntil;
@@ -650,7 +656,8 @@ function sendToWait(e,w){waitSeats[w]=e.id;e.wseat=w;e.state='toWait';e.waitOrde
 function leave(e,bubble){freeSeat(e);e.orders=[];e.state='leaving';if(bubble){e.bubble=bubble;e.bubbleT=2.5;}route(e,DOOR,SW,CY);e.path.push({x:Math.random()<.5?-20:W+20,y:SW+rnd(-6,6)});}
 function goRest(e){playScene('first_rest');freeSeat(e);e.job=null;const used=ents.filter(x=>x.restSpot!=null).map(x=>x.restSpot);
   let k=BREAK_SPOTS.findIndex((_,i)=>!used.includes(i));if(k<0)k=0;e.restSpot=k;e.state='toRest';const [x,y]=BREAK_SPOTS[k];route(e,x,y,BREAK_CORR);}
-function goHome(e){if(e.type==='boss'){freeSeat(e);e.job=null;e.state='returning';const h=bossHome();route(e,h.x,h.y,h.y);return;}if(tired(e)){goRest(e);return;}freeSeat(e);e.state='returning';const h=home(e.idx);route(e,h.x,h.y,HOMEY);}
+function goHome(e){if(e.type==='hall'){freeSeat(e);e.job=null;if(tired(e)){goRest(e);return;}e.state='returning';route(e,HALLHOME.x,HALLHOME.y,HOMEY);return;}
+  if(e.type==='boss'){freeSeat(e);e.job=null;e.state='returning';const h=bossHome();route(e,h.x,h.y,h.y);return;}if(tired(e)){goRest(e);return;}freeSeat(e);e.state='returning';const h=home(e.idx);route(e,h.x,h.y,HOMEY);}
 function serverHome(e){e.job=null;if(e.type==='staff'||e.type==='boss'||tired(e)){goHome(e);return;}e.state='returning';route(e,HALLHOME.x,HALLHOME.y,HOMEY);}
 
 // サイドテーブルに器が残っている席には案内しない(片づけてから)
@@ -686,8 +693,11 @@ const custPat=e=>CT[e.ctype].pat+(e.reg!=null?hearts(S.regs[e.reg])*10:0);
 function spawn(){
   const type=pickType(HOURS[hourNow()][1]);
   if(isSet()){
-    const tb=tables.find(t=>!t.broken&&S.modes[t.slot]==='set'&&t.state==='open'&&occ(t)===0&&t.side.every(x=>!x.length));
-    if(tb){for(let i=0;i<4;i++){const e=mkCust(type,null);e.x=-16-i*16;e.y=SW;e.set=true;ents.push(e);sendToSeat(e,tb,i);}
+    // 片づけ(器の回収と掃除)が済んだ卓だけに案内する
+    const tb=tables.find(t=>!t.broken&&t.state==='open'&&occ(t)===0&&t.side.every(x=>!x.length)&&t.dirt<.35&&!t.cleaner);
+    if(tb){for(let i=0;i<4;i++){const e=mkCust(type,null);e.x=-16-i*16;e.y=SW;e.set=true;ents.push(e);
+        if(S.drink){tb.seats[i]=e.id;e.table=tb;e.seat=i;e.state='toBar';route(e,BAR[i].x,BAR[i].y,WCORR);} // 先にドリンクバーへ
+        else sendToSeat(e,tb,i);}
       tb.setStart=S.clock;tb.setUntil=S.clock+rnd(120,240);S.visits+=4;S.dayVisits+=4;
       floats.push({x:AISLE,y:HI-30,text:'セット4名様',t:0,c:'#ffd35a',small:1});return;}
     S.lost+=4;addRep(-.005);floats.push({x:AISLE,y:HI-30,text:'セット卓が埋まっています',t:0,c:'#ffffff',small:1});return;
@@ -703,10 +713,12 @@ function spawn(){
   S.lost++;addRep(-.005);floats.push({x:AISLE,y:HI-30,text:S.wait?'待合室も満席…':'満席…',t:0,c:'#ffffff'});
 }
 function arrive(e){
-  if(e.state==='toSeat'){e.state='seated';e.sitSince=gt;const s=SLOTS[e.table.slot];e.dir=Math.atan2(s.y-e.y,s.x-e.x);if(e.type==='cust'){const first=e.plan==null;if(first){e.games=0;e.plan=planGames(e.ctype);}
+  if(e.state==='toSeat'){e.state='seated';e.sitSince=gt;const s=SLOTS[e.table.slot];e.dir=Math.atan2(s.y-e.y,s.x-e.x);
+    /* ドリンクバーで取った飲みものを置く */if(e.bar){const sd=e.table.side[e.seat];sd.push(e.bar);if(sd.length>2)sd.shift();e.bar=null;}if(e.type==='cust'){const first=e.plan==null;if(first){e.games=0;e.plan=planGames(e.ctype);}
       // 通い慣れた常連は、席に着くと「いつもの!」で必ず注文する
       if(first&&e.reg!=null&&S.regs[e.reg]>=3&&(S.drink||S.food)){e.bubble='いつもの!';e.bubbleT=2.5;placeOrder(e,S.drink?'drink':'food');rollOrders(e,.5);}
       else rollOrders(e,1);}}
+  else if(e.state==='toBar'){e.state='barring';e.timer=1.2;e.dir=-Math.PI/2;}
   else if(e.state==='toWait'){e.state='waiting';e.sitSince=gt;e.dir=-Math.PI/2;}
   else if(e.state==='toStand'){e.state='standby';e.dir=0;}
   else if(e.state==='leaving'){ents=ents.filter(x=>x!==e);}
@@ -740,7 +752,7 @@ function planGames(t){return Math.max(1,Math.round(PLAN_MEAN[t]+(rnd(-1.6,1.6)+r
 function placeOrder(c,k){c.orders=c.orders||[];if(c.orders.some(o=>o.k===k))return;const T=CT[c.ctype];
   const o={tb:c.table,id:c.id,k,icon:k==='food'?T.fi:T.di,at:gt};c.orders.push(o);orders.push(o);}
 function rollOrders(c,m){if(c.type!=='cust'||!c.table)return;const T=CT[c.ctype];
-  if(S.drink&&Math.random()<T.dr*m)placeOrder(c,'drink');if(S.food&&Math.random()<T.fd*m)placeOrder(c,'food');}
+  if(S.drink&&!isSet()&&Math.random()<T.dr*m)placeOrder(c,'drink');if(S.food&&Math.random()<T.fd*m)placeOrder(c,'food');}
 function startGame(tb){
   tb.state='play';tb.t=0;tb.pend=[];let f=1;tb.seats.map(byId).forEach(m=>{if(isCrew(m))f*=1-0.04*(m.st.mj-1);});
   tb.dur=TIERS[tierOf(tb)].dur*f;const dur=tb.dur;
@@ -758,7 +770,8 @@ function endGame(tb){
   const brk=!tb.manual&&S.tiers[tb.slot]>=1&&Math.random()<(S.tiers[tb.slot]===1?.04:.025)*(S.maint?.5:1);
   if(S.modes[tb.slot]==='set'){
     const done=S.clock>=tb.setUntil||S.closing||brk;
-    if(done){const hrs=Math.max(1,(S.clock-tb.setStart)/60);earn(Math.round(setRate(tb)*hrs),s.x,s.y-8,'#ffe08a');list.forEach(e=>leaveOrWait(e));}
+    if(done){const hrs=Math.max(1,(S.clock-tb.setStart)/60);earn(Math.round(setRate(tb)*hrs),s.x,s.y-8,'#ffe08a');list.forEach(e=>leaveOrWait(e));
+      if(isSet())tb.dirt=Math.max(tb.dirt,.4);} // セット専門店:終わった卓はスタッフが片づけてから次の組を入れる
     else list.forEach(e=>{e.sitSince=gt;e.games=(e.games||0)+1;});
     tb.waitSince=gt;if(brk)breakTable(tb);return;
   }
@@ -909,6 +922,10 @@ function update(dt){
   const tutHold=tutOn&&(S.tut>1||tables.some(t=>t.state==='play')); // 最初の半荘が始まったら、チュートリアル中は新しい客を呼ばない
   if(!S.closing&&!tutHold){spawnT-=dt;if(spawnT<=0){spawn();spawnT=interval()*(0.7+Math.random()*0.6);}}
   ents.forEach(e=>{move(e,dt);if(e.bubbleT>0)e.bubbleT-=dt;});
+  // ドリンクバーで飲みものを取ってから席へ
+  ents.forEach(e=>{if(e.state!=='barring')return;e.timer-=dt;if(e.timer>0)return;
+    const ic=CT[e.ctype].di;earn(barPrice(),e.x,e.y-14,'#9fe8ff',ic);e.bar=ic;
+    if(!e.table){leave(e);return;}e.state='toSeat';const p=seatPos(e.table,e.seat);route(e,p.x,p.y,p.corr);});
   // プロ
   const pro=ents.find(e=>e.type==='pro');
   if(pro){
@@ -964,7 +981,7 @@ function update(dt){
   });
   // 立ち番の掃除と修理業者
   ents.forEach(e=>{
-    if(isCrew(e)&&e.state==='idle'&&!S.closing&&!e.st.quitting){
+    if((isCrew(e)||(isSet()&&e.type==='hall'))&&e.state==='idle'&&!S.closing&&!e.st.quitting){
       const tb=tables.filter(t=>t.dirt>=.35&&t.state!=='play'&&!t.cleaner).sort((a,b)=>b.dirt-a.dirt)[0];
       if(tb){tb.cleaner=e.id;e.cleanTb=tb;e.state='toClean';const s=SLOTS[tb.slot];route(e,s.x+22,s.y-50,s.y-50);}}
     if(e.state==='cleaning'){e.timer-=dt;const tb=e.cleanTb,s=SLOTS[tb.slot];
@@ -1010,7 +1027,8 @@ function drawFloor(){
   if(dg('light')){ctx.fillStyle=`rgba(255,190,110,${.04+.02*dg('light')})`;ctx.fillRect(0,0,W,HI);}
   if(dg('light')>=3){for(let i=0;i<6;i++){const x=DOOR+Math.cos(gt*.7+i)*22,y=300+Math.sin(gt*.7+i)*10;ctx.fillStyle=`rgba(255,240,200,${.25+.2*Math.sin(gt*3+i)})`;ctx.fillRect(x,y,2,2);}}
   // 待合室(カウンター前)
-  if(S.wait){ctx.fillStyle='#4b3d5c';rr(8,8,144,92,6);ctx.fill();ctx.strokeStyle='#6a587e';ctx.lineWidth=1;ctx.stroke();
+  if(isSet())drawDrinkBar();
+  else if(S.wait){ctx.fillStyle='#4b3d5c';rr(8,8,144,92,6);ctx.fill();ctx.strokeStyle='#6a587e';ctx.lineWidth=1;ctx.stroke();
     [26,90].forEach(x=>{ctx.fillStyle='#5a2a36';rr(x-3,66,60,26,6);ctx.fill();ctx.fillStyle='#8a3d4e';rr(x+2,68,50,17,5);ctx.fill();
       ctx.fillStyle='#9e4a5c';rr(x+4,70,22,13,4);ctx.fill();rr(x+28,70,22,13,4);ctx.fill();ctx.fillStyle='#4a2230';rr(x-3,85,60,7,3);ctx.fill();});
     if(S.tv){ctx.fillStyle='#111';rr(58,10,46,6,2);ctx.fill();const c=['#4bb0e0','#e0a526','#6ad06a','#e04b4b'][Math.floor(gt*1.5)%4];
@@ -1051,7 +1069,7 @@ function drawFloor(){
   // カウンター
   ctx.fillStyle='#4a2f1c';rr(COUNTER_X,34,98,24,3);ctx.fill();ctx.fillStyle='#6b4428';rr(COUNTER_X,34,98,8,3);ctx.fill();
   ctx.fillStyle='#222';rr(COUNTER_X+58,30,20,14,2);ctx.fill();ctx.fillStyle='#7fe0a0';ctx.fillRect(COUNTER_X+61,32,14,4);
-  tag('待合',40,24,'#23272f','#e8ecf2',8);tag('受付',COUNTER_X+14,65,'#23272f','#e8ecf2',8);if(S.food)tag('厨房',W-78,14,'#23272f','#e8ecf2',7);
+  if(!isSet())tag('待合',40,24,'#23272f','#e8ecf2',8);tag('受付',COUNTER_X+14,65,'#23272f','#e8ecf2',8);if(S.food)tag('厨房',W-78,14,'#23272f','#e8ecf2',7);
   // 内装小物
   const pl=[[W-16,248],[12,364],[W-16,CY]];for(let i=0;i<dg('plant');i++){const[x,y]=pl[i];ctx.save();ctx.translate(x,y);const sc=dg('plant')>=3?1.3:1;ctx.scale(sc,sc);ctx.translate(-x,-y);
     ctx.fillStyle='#5a3a22';ctx.beginPath();ctx.arc(x,y,7,0,7);ctx.fill();ctx.fillStyle='#2f8a4a';for(let a=0;a<6;a++){ctx.beginPath();ctx.ellipse(x+Math.cos(a)*6,y+Math.sin(a)*6,6,3,a,0,7);ctx.fill();}ctx.restore();}
@@ -1078,6 +1096,12 @@ function drawFloor(){
   else{ctx.beginPath();ctx.arc(AISLE+36,HI+4,7,0,7);ctx.stroke();label('雀',AISLE+36,HI+4.5,9,col(fl));}
   ctx.restore();
 }
+function drawDrinkBar(){if(!S.drink){dashed(8,8,144,92);label('ドリンクバー(未導入)',81,54);return;}
+  ctx.fillStyle='#39414f';rr(8,8,144,44,6);ctx.fill();ctx.fillStyle='#4d5666';rr(8,40,144,12,4);ctx.fill();
+  const cols=['#e04b4b','#f0c040','#4bb0e0','#6ad06a','#f08a3c'],n=Math.min(5,2+Math.ceil(S.drink/2));
+  for(let i=0;i<n;i++){const x=16+i*27;ctx.fillStyle='#dfe3e8';rr(x,12,21,26,3);ctx.fill();ctx.fillStyle=cols[i];ctx.fillRect(x+3,15,15,7);
+    ctx.fillStyle='#8a929c';ctx.fillRect(x+9,26,3,5);ctx.fillStyle='rgba(255,255,255,.8)';ctx.beginPath();ctx.arc(x+10.5,36,2.2,0,7);ctx.fill();}
+  tag('ドリンクバー',80,60,'#23272f','#e8ecf2',8);}
 // ---------- 店の外(歩道と道路) ----------
 let peds=[],cars=[],pedT=1,carT=3;
 function nightLevel(){const h=S.clock/60;return h>=20?1:h>=17?(h-17)/3:0;}
@@ -1305,8 +1329,10 @@ const ROW={
     desc:()=>'全自動卓の故障が半分に減ります',buy(){S.maint=1;toast('保守契約を結びました');}},
   member:{name:'メンバーを採用',lv:()=>S.members.length+'/'+memberCap()+'人',cost:()=>0,max:()=>S.members.length>=memberCap(),lock:no,pickFirst:'member',
     desc:()=>isSet()?`セット卓には入らず、提供や片づけ、掃除をします(この店は${memberCap()}人まで)`:`1卓に1人まで入って打ち、手が空いたら提供や片づけ、掃除をします(この店は${memberCap()}人まで)`,buy(){}},
+  bar:{name:'ドリンクバー',lv:()=>S.drink?'Lv'+S.drink:'',cost:()=>S.drink?Math.round(190*Math.pow(1.293,S.drink-1)):250,max:()=>false,lock:no,
+    desc:()=>S.drink?`お客さんが半荘の前に自分で飲みものを取ります。1人 ¥${fmt(barPrice())}`:'お客さんが半荘の前に自分で飲みものを取るドリンクバーを置きます',buy(){if(!S.drink)toast('ドリンクバーを置きました');S.drink++;}},
   hall:{name:'ホールスタッフを採用',lv:()=>S.hall?'1/1人':'0/1人',cost:()=>0,max:()=>!!S.hall,lock:no,pickFirst:'hall',
-    desc:()=>'麻雀は打たず、提供に専念します。メンバーが卓に入っていても注文を回せます(1人)',buy(){}}
+    desc:()=>isSet()?'料理の提供と、セットが終わった卓の片づけ・掃除をします(1人)':'麻雀は打たず、提供に専念します。メンバーが卓に入っていても注文を回せます(1人)',buy(){}}
 };
 function tableRow(i){return{name:`${i+1}番卓`,lv:()=>TIERS[S.tiers[i]].short,
   alt:{text:()=>'修理',cls:()=>tables[i].broken||tables[i].manual?'alt':'alt hide',click(){if(tables[i].broken||tables[i].manual)repairMenu(tables[i]);}},cost:()=>upCost(i,S.tiers[i]),max:()=>S.tiers[i]>=2,lock:no,
@@ -1320,6 +1346,7 @@ function decoRow(k){const d=DECO[k],L=()=>S.deco[k],pc=n=>+(d.b*100*n/DECO_STEP)
 // 各タブの並び。{h:'…'}は見出し
 function tabRows(){
   if(tab==='table'){const r=[{h:'場代'},ROW.fee,{h:'卓'},ROW.addTable];tables.forEach((_,i)=>r.push(tableRow(i)));return r;}
+  if(tab==='fac'&&isSet())return[{h:'ドリンクバー・フード'},ROW.bar,ROW.food,{h:'掃除・メンテナンス'},ROW.broom,ROW.maint];
   if(tab==='fac')return[{h:'待合スペース'},ROW.mag,ROW.manga,ROW.tv,{h:'ドリンク・フード'},ROW.drink,ROW.food,{h:'掃除・メンテナンス'},ROW.broom,ROW.maint];
   if(tab==='deco')return Object.keys(DECO).map(decoRow);
   if(tab==='staff')return[ROW.member,ROW.hall];
@@ -1354,7 +1381,7 @@ function renderTab(){
         if(!row.armed){row.armed=true;refresh();setTimeout(()=>{row.armed=false;refresh();},3000);return;}
         row.armed=false;dismiss(c);};
       rows.push(row);};
-    addSec(L,'メンバー');addRow(L,ROW.member);S.members.forEach((m,i)=>crewRow({m,role:'member',i}));
+    if(!isSet()){addSec(L,'メンバー');addRow(L,ROW.member);S.members.forEach((m,i)=>crewRow({m,role:'member',i}));} // セット専門店はホールスタッフだけ
     addSec(L,'ホールスタッフ');addRow(L,ROW.hall);if(S.hallStaff&&S.hall)crewRow({m:S.hallStaff,role:'hall'});
     refresh();return;}
   if(tab==='reg'&&isSet()){L.innerHTML='<div class="note">セット専門店には常連はいません。4人組のお客さんが、時間貸しで卓を使います。</div>';return;}
@@ -1604,7 +1631,7 @@ function renderMapPanel(){const P=document.getElementById('mapPanel'),i=mapSel,g
     const go=(k,t)=>k===S.active?`<button class="mbtn sec" data-go="${k}">${t}に戻る</button>`:`<button class="mbtn pri" data-go="${k}">${t}へ移動する</button>`;
     body=`<h3>${g.no}号店 ${nm(fi)}</h3><div class="mp-sub">${fi===S.active?'いま表示している店です':'営業中。見ていない間は最高の売上ペースの1割が入ります'}</div>${info}`+go(fi,'この店');
     if(si>=0||canSetShop(i)){if(si>=0)body+=`<h3 class="mp-set">セット専門店 ${nm(si)}</h3><div class="mp-sub">${si===S.active?'いま表示している店です':'4人組の時間貸し専門。営業中'}</div>`+go(si,'セット専門店');
-      else{const c=setOpenCost(i),short=S.money<c;body+=`<h3 class="mp-set">セット専門店</h3><div class="mp-sub">4人組の時間貸しだけを受ける店を、この街にもう1店出せます。出店費用 ¥${fmt(c)}</div>`+
+      else{const c=setOpenCost(i),short=S.money<c;body+=`<h3 class="mp-set">セット専門店</h3><div class="mp-sub">4人組の時間貸しだけを受ける店を、この街にもう1店出せます。ドリンクバー形式で、スタッフはホールスタッフ1人です。出店費用 ¥${fmt(c)}</div>`+
         `<button class="mbtn sec" id="mpSet" ${short?'disabled':''}>${short?`あと ¥${fmt(c-S.money)} 貯めると出せます`:'セット専門店を出す'}</button>`;}}}
   else if(st==='next'){const short=S.money<g.open;
     body=`<h3>${g.no}号店 ${g.area}</h3><div class="mp-sub">${i===0?'ここから雀荘経営が始まります':'新しい店に持っていけるのは所持金だけです。スタッフと常連は今の店に残ります'}</div>${info}`+
