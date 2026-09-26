@@ -1335,7 +1335,9 @@ function renderTab(){
     <div class="stat"><span>掃除した回数</span><b id="st-clean"></b></div><div class="stat"><span>修理した回数</span><b id="st-rep"></b></div><div class="stat"><span>満席で帰ったお客さん</span><b id="st-lost"></b></div>
     <div class="stat"><span>来店ペース(内装)</span><b id="st-pace"></b></div>
     <div class="note">汚れた卓はお客さんに避けられ、評判も下がります。全自動卓は時々故障するので、店内の卓をタップして対応してください。お店を離れている間も売上が貯まります(店長代行で最大12時間分まで延ばせます)。プレイ中の卓をタップすると、半荘が少し早く進みます。</div>
+    <div class="sec">設定</div><div class="row"><div><div class="nm">効果音</div><div class="ds">タップしたときのクリック音</div></div><button class="buy" id="seBtn">${seOn?'オン':'オフ'}</button></div>
     <div class="sec">データ</div><div class="row"><div><div class="nm">データをリセット</div><div class="ds">最初からやり直します</div></div><button class="buy" id="resetBtn">リセット</button></div>`;
+    document.getElementById('seBtn').onclick=e=>{seOn=!seOn;try{localStorage.setItem('jansou-se',seOn?'1':'0');}catch(_){}e.target.textContent=seOn?'オン':'オフ';if(seOn)clickSound();};
     let armed=false;document.getElementById('resetBtn').onclick=e=>{if(!armed){armed=true;e.target.textContent='もう一度押す';setTimeout(()=>{armed=false;e.target.textContent='リセット';},3000);return;}
       const iap=S.iap;try{localStorage.removeItem(KEY);}catch(_){}S=fresh();S.iap=iap;/* 課金した内容はリセットしても残す */REG=REGS[0];applyLayout();initWorld();renderTab();setPre();playScene('prologue',()=>openMap('start'));toast('リセットしました');};
     refresh();return;}
@@ -1469,6 +1471,16 @@ sheetEl.addEventListener('click',e=>{if(Date.now()<dragUntil){e.stopPropagation(
 document.addEventListener('gesturestart',e=>e.preventDefault()); // iOSのピンチズーム抑止
 document.getElementById('rushBtn').onclick=()=>{if(proOn())return;playAd(()=>{S.proUntil=Date.now()+120000;if(!ents.some(e=>e.type==='pro')&&!isSet())mkPro();spawnT=0;toast('麻雀プロが来店!2分間、客足が2倍になります');save();});};
 
+// ---------- 効果音:タップしたときのクリック音。音声ファイルは使わず Web Audio で合成する ----------
+// オン/オフは端末ごとに保存し、データをリセットしても消さない
+let seCtx=null,seOn=true;try{seOn=localStorage.getItem('jansou-se')!=='0';}catch(_){}
+function clickSound(){if(!seOn)return;try{seCtx=seCtx||new (window.AudioContext||window.webkitAudioContext)();if(seCtx.state==='suspended')seCtx.resume();
+  const t=seCtx.currentTime,o=seCtx.createOscillator(),g=seCtx.createGain();o.type='triangle';
+  o.frequency.setValueAtTime(1400,t);o.frequency.exponentialRampToValueAtTime(700,t+.04);
+  g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.18,t+.005);g.gain.exponentialRampToValueAtTime(.0001,t+.06);
+  o.connect(g);g.connect(seCtx.destination);o.start(t);o.stop(t+.08);}catch(_){}}
+// ボタン・店内・マップのピン・会話送りをタップしたら鳴らす(押せないボタンでは鳴らさない)
+document.addEventListener('pointerdown',e=>{const el=e.target.closest&&e.target.closest('button,[role="button"],canvas,#story');if(!el||el.disabled)return;clickSound();},true);
 let toastTimer;function toast(m){const t=document.getElementById('toast');t.textContent=m;t.style.opacity=1;clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.style.opacity=0,1800);}
 const modal=document.getElementById('modal'),mcard=document.getElementById('mcard');
 function playAd(cb){if(noAds()){cb();return;}let n=3;modal.classList.add('show');
