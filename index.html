@@ -240,8 +240,11 @@ body.pre #toast{z-index:8}
   background:#fffaf0;color:#3a2414;border:2px solid #c8a04a;box-shadow:0 8px 24px rgba(0,0,0,.35);font-size:14px;line-height:1.6}
 #coachTip .ct-h{font-size:11.5px;font-weight:700;color:#a0701a;letter-spacing:.05em}
 #coachTip .ct-b{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}
+#coachTip .ct-b:empty{display:none}
+body.tut .hd-btns{visibility:hidden} /* チュートリアル中は右上をスキップボタンに譲る */
+#coachSkip{position:fixed;z-index:8;display:none;top:calc(10px + env(safe-area-inset-top,0px));right:12px;min-height:40px;padding:0 16px;border-radius:999px;
+  border:1.5px solid rgba(255,255,255,.8);background:rgba(20,20,30,.6);color:#fff;font:inherit;font-weight:700;font-size:13px;cursor:pointer}
 #coachTip button{min-height:40px;padding:0 16px;border-radius:999px;font:inherit;font-weight:700;font-size:13px;cursor:pointer}
-#coachTip .ct-skip{border:1.5px solid #d8c3a0;background:transparent;color:#7a5a3a}
 #coachTip .ct-next{border:0;background:#c0392b;color:#fff}
 @media (prefers-reduced-motion: reduce){#coachRing{animation:none}}
 </style>
@@ -320,7 +323,7 @@ body.pre #toast{z-index:8}
   </div>
 </div>
 <div id="modal"><div class="mcard" id="mcard"></div></div>
-<div id="coachRing"></div><div id="coachTip" role="dialog" aria-live="polite"></div>
+<div id="coachRing"></div><div id="coachTip" role="dialog" aria-live="polite"></div><button type="button" id="coachSkip">チュートリアルをスキップ</button>
 <div id="map" role="dialog" aria-label="全国マップ">
   <div class="map-head"><div><div class="map-title">全国マップ</div><div class="map-sub" id="mapSub"></div></div><button type="button" id="mapClose">閉じる</button></div>
   <div class="map-body"><svg id="mapSvg" viewBox="22 2 342 364" preserveAspectRatio="xMidYMid meet"></svg></div>
@@ -807,6 +810,7 @@ function update(dt){
   ents.filter(e=>e.state==='waiting').sort((a,b)=>a.waitOrder-b.waitOrder).forEach(e=>{
     const tb=openTable(e);if(tb)sendToSeat(e,tb,freeIdx(tb));
     else if(gt-e.sitSince>patience()+custPat(e)-40){addRep(-.05);leave(e,'…');}});
+  if(S.tut===1&&spawnT>1)spawnT=1; // チュートリアルの最初は、半荘が早く始まるようにお客さんを早めに呼ぶ
   if(!S.closing){spawnT-=dt;if(spawnT<=0){spawn();spawnT=interval()*(0.7+Math.random()*0.6);}}
   ents.forEach(e=>{move(e,dt);if(e.bubbleT>0)e.bubbleT-=dt;});
   // プロ
@@ -1546,14 +1550,19 @@ document.getElementById('stSkip').onclick=skipStory;
 // ---------- チュートリアル(1号店の開店後、田中さんの話が終わったら) ----------
 // S.tut: 0=まだ 1〜=進行中のステップ -1=完了
 let tutTap=0,tutBase=null;
-const coachRing=document.getElementById('coachRing'),coachTip=document.getElementById('coachTip');
+const coachRing=document.getElementById('coachRing'),coachTip=document.getElementById('coachTip'),coachSkip=document.getElementById('coachSkip');
+coachSkip.onclick=()=>{S.tut=-1;save();};
+// 置いてある卓すべてを囲む枠(椅子・サイドテーブル・卓の札まで入れる)
+function tablesRect(){if(!tables.length)return null;const xs=tables.map(t=>SLOTS[t.slot].x),ys=tables.map(t=>SLOTS[t.slot].y),m=64,r=cv.getBoundingClientRect();
+  const x0=Math.min(...xs)-m,x1=Math.max(...xs)+m,y0=Math.min(...ys)-m-6,y1=Math.max(...ys)+m;
+  return{left:r.left+x0*scale,top:r.top+y0*scale,width:(x1-x0)*scale,height:(y1-y0)*scale};}
 function canvasRect(x,y,half){const r=cv.getBoundingClientRect(),h=Math.max(half*scale,22);return{left:r.left+x*scale-h,top:r.top+y*scale-h,width:h*2,height:h*2};}
 // 下部パネルの項目:タブが違うか閉じていればタブのボタンを、開いていれば購入ボタンを示す
 function tabEl(t,key){const nb=document.querySelector(`nav button[data-tab="${t}"]`);if(tab!==t||sheetEl.classList.contains('collapsed'))return nb;
   const r=rows.find(r=>r.u&&(r.u===key||r.u.key===key));if(!r)return nb;if(!r.btn._sv){r.btn._sv=1;r.btn.scrollIntoView({block:'nearest'});}return r.btn;}
 const TUT=[
   {t:'お客さんが3人そろうと、メンバーが4人目に入って半荘が始まります。まずは様子を見てみましょう。',
-    rect:()=>tables[0]&&canvasRect(SLOTS[0].x,SLOTS[0].y,46),done:()=>tables.some(t=>t.state==='play')||S.games>0},
+    rect:tablesRect,tipTop:1,done:()=>tables.some(t=>t.state==='play')||S.games>0},
   {t:'対局中の卓をタップすると、半荘が少し早く進みます。3回タップしてみましょう。',
     rect:()=>{const tb=tables.find(t=>t.state==='play');return tb&&canvasRect(SLOTS[tb.slot].x,SLOTS[tb.slot].y,46);},done:()=>tutTap>=3},
   {t:'「卓」タブの「場代」を上げると、半荘ごとの収入が増えます。1回上げてみましょう。',
@@ -1569,17 +1578,20 @@ function tutNext(){S.tut++;tutBase=null;tutTap=0;coachTip._s=null;if(S.tut>TUT.l
 function tutUpdate(){
   if(S.tut===0&&S.stage===0&&S.opened&&(S.story||{}).ch0_open&&!storyOpen()){S.tut=1;save();}
   const on=S.tut>0&&S.opened&&!storyOpen()&&S.closing!==2&&!modal.classList.contains('show')&&!document.getElementById('map').classList.contains('show');
-  if(!on){coachRing.style.display=coachTip.style.display='none';return;}
+  document.body.classList.toggle('tut',on);
+  if(!on){coachRing.style.display=coachTip.style.display=coachSkip.style.display='none';return;}
+  coachSkip.style.display='block';
   const st=TUT[S.tut-1];if(!st){S.tut=-1;save();return;}
   if(!tutBase)tutBase={fee:S.fee,plant:S.deco.plant};
   if(st.done&&st.done()){tutNext();return;}
   if(coachTip._s!==S.tut){coachTip._s=S.tut;
-    coachTip.innerHTML=`<div class="ct-h">チュートリアル ${S.tut}/${TUT.length}</div><div>${st.t}</div><div class="ct-b"><button type="button" class="ct-skip">スキップ</button>${st.next?'<button type="button" class="ct-next">次へ</button>':''}</div>`;
-    coachTip.querySelector('.ct-skip').onclick=()=>{S.tut=-1;save();};const nx=coachTip.querySelector('.ct-next');if(nx)nx.onclick=tutNext;}
+    coachTip.innerHTML=`<div class="ct-h">チュートリアル ${S.tut}/${TUT.length}</div><div>${st.t}</div><div class="ct-b">${st.next?'<button type="button" class="ct-next">次へ</button>':''}</div>`;
+    const nx=coachTip.querySelector('.ct-next');if(nx)nx.onclick=tutNext;}
   let r=null;if(st.rect)r=st.rect();else if(st.el){const e=st.el();if(e&&e.offsetParent)r=e.getBoundingClientRect();}
   coachTip.style.display='block';const vh=window.innerHeight;
   if(r){const p=4;Object.assign(coachRing.style,{display:'block',left:r.left-p+'px',top:r.top-p+'px',width:r.width+p*2+'px',height:r.height+p*2+'px'});
-    if(r.top+r.height/2>vh*.5){coachTip.style.top='';coachTip.style.bottom=Math.min(vh-120,vh-r.top+14)+'px';}
+    if(st.tipTop){coachTip.style.bottom='';coachTip.style.top='calc(60px + env(safe-area-inset-top,0px))';}
+    else if(r.top+r.height/2>vh*.5){coachTip.style.top='';coachTip.style.bottom=Math.min(vh-120,vh-r.top+14)+'px';}
     else{coachTip.style.bottom='';coachTip.style.top=Math.min(vh-160,r.top+r.height+14)+'px';}}
   else{coachRing.style.display='none';coachTip.style.bottom='';coachTip.style.top='18%';}
 }
