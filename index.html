@@ -830,7 +830,10 @@ const nextStage=()=>S.shops.filter(sh=>sh.kind!=='set').length; // 次にフリ�
 const isNewest=()=>!isSet()&&S.stage===nextStage()-1;
 // いちばん新しいフリー店が目標を達成したか(見ている店がどこでも判定できる)
 const newestCleared=()=>{const k=freeIdxOf(nextStage()-1);if(k<0)return false;return k===S.active?(goalMet()||!!S.cleared):!!S.shops[k].cleared;};
-const setOpenCost=i=>Math.round(STAGES[i].open*0.5);
+// セット専門店を出せるか:2号店以降の街はフリー店があれば、1号店の街はフリー店が目標を達成したら
+const shopCleared=k=>k<0?false:k===S.active?(goalMet()||!!S.cleared):!!S.shops[k].cleared;
+const canSetShop=i=>freeIdxOf(i)>=0&&(i>=1||shopCleared(freeIdxOf(i)));
+const setOpenCost=i=>i?Math.round(STAGES[i].open*0.5):30000; // 1号店の街は出店費用が0なので固定額
 function checkGoal(){if(isSet())return;if(goalMet()&&!S.cleared){S.cleared=1;save();
   const last=S.stage>=STAGES.length-1;playScene(last?'finale':`ch${S.stage}_end`,last?()=>openMap('view'):null);
   toast(S.stage+1<STAGES.length?`${ST().no}号店の目標を達成しました。次の店を出せます`:'東京の目標を達成。全国制覇です');burst(W/2,HI/2,60,['#ffd35a','#ffffff']);}}
@@ -862,7 +865,7 @@ function switchShop(i,quiet){if(i===S.active||!S.shops[i])return;
 function newStore(){const ns=nextStage();if(!newestCleared()||ns>=STAGES.length)return;const oc=STAGES[ns].open;if(S.money<oc)return;S.money-=oc;
   S.shops.push(freshShop(ns,S));switchShop(S.shops.length-1,true);prepareOpening();}
 // セット専門店:2号店の街から、フリー店のある街にもう1店出せる
-function newSetStore(i){if(i<1||setIdxOf(i)>=0||freeIdxOf(i)<0)return;const oc=setOpenCost(i);if(S.money<oc)return;S.money-=oc;
+function newSetStore(i){if(setIdxOf(i)>=0||!canSetShop(i))return;const oc=setOpenCost(i);if(S.money<oc)return;S.money-=oc;
   S.shops.push(freshShop(i,S,'set'));switchShop(S.shops.length-1,true);prepareOpening();}
 
 // ---------- 閉店 ----------
@@ -1588,7 +1591,7 @@ function renderMapPanel(){const P=document.getElementById('mapPanel'),i=mapSel,g
   if(st==='open'){const fi=freeIdxOf(i),si=setIdxOf(i),nm=k=>esc((k===S.active?S.shopName:S.shops[k].shopName)||g.area);
     const go=(k,t)=>k===S.active?`<button class="mbtn sec" data-go="${k}">${t}に戻る</button>`:`<button class="mbtn pri" data-go="${k}">${t}へ移動する</button>`;
     body=`<h3>${g.no}号店 ${nm(fi)}</h3><div class="mp-sub">${fi===S.active?'いま表示している店です':'営業中。見ていない間は最高の売上ペースの1割が入ります'}</div>${info}`+go(fi,'この店');
-    if(i>=1){if(si>=0)body+=`<h3 class="mp-set">セット専門店 ${nm(si)}</h3><div class="mp-sub">${si===S.active?'いま表示している店です':'4人組の時間貸し専門。営業中'}</div>`+go(si,'セット専門店');
+    if(si>=0||canSetShop(i)){if(si>=0)body+=`<h3 class="mp-set">セット専門店 ${nm(si)}</h3><div class="mp-sub">${si===S.active?'いま表示している店です':'4人組の時間貸し専門。営業中'}</div>`+go(si,'セット専門店');
       else{const c=setOpenCost(i),short=S.money<c;body+=`<h3 class="mp-set">セット専門店</h3><div class="mp-sub">4人組の時間貸しだけを受ける店を、この街にもう1店出せます。出店費用 ¥${fmt(c)}</div>`+
         `<button class="mbtn sec" id="mpSet" ${short?'disabled':''}>${short?`あと ¥${fmt(c-S.money)} 貯めると出せます`:'セット専門店を出す'}</button>`;}}}
   else if(st==='next'){const short=S.money<g.open;
