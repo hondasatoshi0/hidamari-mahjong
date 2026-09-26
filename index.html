@@ -905,7 +905,8 @@ bctx.fillText=(t,x,y)=>capText('f',t,x,y);bctx.strokeText=(t,x,y)=>capText('s',t
 function replayText(){textQ.forEach(q=>{const m=/^(.*?)(\d+(?:\.\d+)?)px/.exec(q.font);const size=m?parseFloat(m[2])*q.sc:10;
   ctx.font=`${m?m[1]:''}${size}px ${PIXFONT}`;ctx.textAlign=q.align;ctx.textBaseline=q.base;ctx.globalAlpha=q.alpha;
   if(q.op==='s'){ctx.lineWidth=q.lw;ctx.strokeStyle=q.stroke;ctx.strokeText(q.t,q.x,q.y);}else{ctx.fillStyle=q.fill;ctx.fillText(q.t,q.x,q.y);}});ctx.globalAlpha=1;}
-function fit(){const st=document.getElementById('stage');scale=Math.min(st.clientWidth/W,st.clientHeight/H);
+function fit(){if(drag&&drag.on)return; // 下部のドラッグ中は合わせ直さず、開閉しきったときに合わせる
+  const st=document.getElementById('stage');scale=Math.min(st.clientWidth/W,st.clientHeight/H);
   const cw=Math.floor(W*scale),ch=Math.floor(H*scale);cv.style.width=cw+'px';cv.style.height=ch+'px';
   dpr=window.devicePixelRatio||1;cv.width=Math.round(cw*dpr);cv.height=Math.round(ch*dpr);buf.width=Math.round(W*BS);buf.height=Math.round(H*BS);}
 const planks=[];
@@ -1358,14 +1359,14 @@ document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
   if(tab===b.dataset.tab){setSheet(sheetEl.classList.contains('collapsed'));return;} // 選択中のタブをもう一度押すと開閉
   tab=b.dataset.tab;setSheet(true);document.querySelectorAll('nav button').forEach(x=>x.setAttribute('aria-selected',x===b));renderTab();});
 // ドラッグで開閉:取っ手・タブ列は上下に、リストは一番上までスクロールした状態から下へ引くと閉じる
-const listEl=document.getElementById('list');let drag=null,dragUntil=0;
+const listEl=document.getElementById('list');var drag=null;let dragUntil=0; // dragはfit()から先に参照されるのでvar
 function fullH(){const c=sheetEl.classList.contains('collapsed');listEl.style.height='';sheetEl.classList.remove('collapsed');const h=listEl.offsetHeight;sheetEl.classList.toggle('collapsed',c);return h;}
 function dStart(y,fromList){drag={y0:y,t0:Date.now(),h0:sheetEl.classList.contains('collapsed')?0:listEl.offsetHeight,full:fullH(),on:false,fromList,dy:0};}
 function dMove(y){if(!drag)return false;const dy=y-drag.y0;
   if(!drag.on){if(Math.abs(dy)<8)return false;if(drag.fromList&&dy<0){drag=null;return false;}drag.on=true;sheetEl.classList.remove('collapsed');}
   listEl.style.height=Math.max(0,Math.min(drag.full,drag.h0-dy))+'px';drag.dy=dy;return true;}
 function dEnd(){if(!drag)return;if(drag.on){const h=listEl.offsetHeight,flick=Date.now()-drag.t0<250&&Math.abs(drag.dy)>20;
-    listEl.style.height='';setSheet(flick?drag.dy<0:drag.h0>0?h>drag.full*.7:h>drag.full*.3);dragUntil=Date.now()+350;}drag=null;}
+    listEl.style.height='';setSheet(flick?drag.dy<0:drag.h0>0?h>drag.full*.7:h>drag.full*.3);dragUntil=Date.now()+350;drag=null;fit();}drag=null;}
 [sheetBtn,sheetEl.querySelector('nav')].forEach(el=>el.addEventListener('pointerdown',e=>{if(e.button===0)dStart(e.clientY,false);}));
 window.addEventListener('pointermove',e=>{if(drag&&!drag.fromList)dMove(e.clientY);});
 window.addEventListener('pointerup',()=>{if(drag&&!drag.fromList)dEnd();});
@@ -1585,7 +1586,7 @@ function tabEl(t,key){const nb=document.querySelector(`nav button[data-tab="${t}
 const TUT=[
   {t:'卓に4人そろうと半荘が始まります。お客さんが3人のときは、メンバーが4人目に入ります。まずは様子を見てみましょう。',
     rect:tablesRect,tipTop:1,watch:1,done:()=>tables.some(t=>t.state==='play')||S.games>0},
-  {t:'チュートリアル中は時間が止まっています。対局中の卓をタップすると、半荘が少し早く進みます。3回タップしてみましょう。',
+  {t:'対局中の卓をタップすると、半荘が少し早く進みます。3回タップしてみましょう。',
     rect:()=>{const tb=tables.find(t=>t.state==='play');return tb&&canvasRect(SLOTS[tb.slot].x,SLOTS[tb.slot].y,46);},done:()=>tutTap>=3},
   {t:'「卓」タブの「場代」を上げると、半荘ごとの収入が増えます。1回上げてみましょう。',
     el:()=>tabEl('table',ROW.fee),tipTop:1,done:()=>S.fee>tutBase.fee},
